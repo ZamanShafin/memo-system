@@ -1,0 +1,89 @@
+Metadata-Version: 2.4
+Name: inter-office-memo-system
+Version: 1.0.0
+Summary: Multi-Tenant Inter-Office Memo Management System for CSE226 Foundations of Vibe Coding (NSU)
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi>=0.111.0
+Requires-Dist: uvicorn[standard]>=0.30.0
+Requires-Dist: pydantic>=2.7.0
+Requires-Dist: pydantic-settings>=2.2.0
+Requires-Dist: email-validator>=2.0.0
+Requires-Dist: sqlalchemy>=2.0.30
+Requires-Dist: passlib[bcrypt]>=1.7.4
+Requires-Dist: bcrypt>=4.1.2
+Requires-Dist: pyjwt>=2.8.0
+Requires-Dist: python-multipart>=0.0.9
+Requires-Dist: reportlab>=4.2.0
+Requires-Dist: jinja2>=3.1.4
+Requires-Dist: aiofiles>=23.2.1
+Requires-Dist: pytest>=8.2.0
+Requires-Dist: httpx>=0.27.0
+
+# Enterprise Inter-Office Memo Management System
+
+A full-featured, secure, multi-tenant web application designed to digitize, streamline, and govern internal organizational communications, sequential multi-level approvals, reviews, and versioned feedback loops.
+
+---
+
+## 🏛️ System Features
+
+- 🏢 **Strict Multi-Tenancy:** Complete data, user, and workflow isolation per organization (`Acme Corporation`, `Nexus Financial Group`, etc.).
+- 🔄 **Sequential Workflow Engine:** Multi-step sequential approval paths (`Requester → Dept Head → Finance Manager → Director → CEO`) with out-of-order execution prevention.
+- 🤝 **Workflow Authority Delegation:** Temporary delegation with timestamped *acting-on-behalf* audit logs.
+- 📝 **Rich Text & Versioning:** Rich-text memo composer with automated version snapshotting (`v1`, `v2`) on resubmission.
+- 📄 **Formal PDF Export:** Official corporate letterhead memo PDF generator via ReportLab with approval stamp history.
+- 🔔 **Real-Time Notification Hub:** In-app notification center with unread counters.
+- 📊 **Analytics & Reporting:** Interactive dashboards with Chart.js for KPIs, status distributions, and turnaround times.
+- 🛡️ **Security & Compliance:** BCrypt password hashing, JWT sessions, server-side authorization, and immutable audit logs.
+- ⚡ **Demo Switcher:** Instant one-click demo login across all roles and organizations.
+
+---
+
+## 🚀 Quick Start
+
+### 1. Start the Server
+```powershell
+# Using uv (Recommended)
+uv run python run.py
+
+# Or using standard python
+python run.py
+```
+Open your browser at: **`http://127.0.0.1:8000`**
+
+### 2. Run Automated Tests
+```powershell
+uv run pytest -v
+```
+
+### 3. Package Source Code Archive
+```powershell
+uv run python package_source.py
+```
+
+---
+
+## 👥 Pre-Configured Demonstration Accounts
+
+All accounts use the password: `password123`
+
+| Organization | Role | Name | Email |
+|---|---|---|---|
+| **Acme Corporation** | Org Admin | Sarah Jenkins | `admin@acmecorp.com` |
+| **Acme Corporation** | Dept Head (Engineering) | David Vance | `head.eng@acmecorp.com` |
+| **Acme Corporation** | Finance Manager | Rachel Green | `finance.mgr@acmecorp.com` |
+| **Acme Corporation** | Director of Operations | Marcus Sterling | `director@acmecorp.com` |
+| **Acme Corporation** | Chief Executive Officer (CEO) | Eleanor Vance | `ceo@acmecorp.com` |
+| **Acme Corporation** | Senior Software Engineer | Alex Morgan | `alex.morgan@acmecorp.com` |
+| **Acme Corporation** | Operations Specialist | Jessica Taylor | `jessica.taylor@acmecorp.com` |
+| **Nexus Financial Group** | Managing Director / Admin | Jonathan Hayes | `admin@nexusgroup.com` |
+| **Nexus Financial Group** | Principal Strategist | Victoria Price | `lead.analyst@nexusgroup.com` |
+
+---
+
+## 📚 Documentation Index
+
+- 📖 [Comprehensive Project Documentation](file:///c:/Users/User/Desktop/memo/docs/PROJECT_DOCUMENTATION.md)
+- ⚙️ [Installation and Setup Guide](file:///c:/Users/User/Desktop/memo/docs/INSTALLATION.md)
+- 🤖 [AI Prompt & Response Development History](file:///c:/Users/User/Desktop/memo/docs/AI_VIBE_CODING_LOG.md)
