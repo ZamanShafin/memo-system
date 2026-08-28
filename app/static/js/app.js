@@ -696,6 +696,7 @@ function handleTemplateSelectChange(templateId) {
 }
 
 async function submitMemoForm(isDraft = false) {
+    const submitBtn = isDraft ? document.getElementById('btn-save-draft') : document.getElementById('btn-submit-workflow');
     const title = document.getElementById('memo-title-input').value.trim();
     const body = appState.quillEditor ? appState.quillEditor.root.innerHTML : '';
     const categoryId = document.getElementById('memo-category-select').value || null;
@@ -739,6 +740,13 @@ async function submitMemoForm(isDraft = false) {
         return;
     }
 
+    let origHtml = '';
+    if (submitBtn) {
+        origHtml = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span class="inline-flex items-center gap-1.5"><svg class="animate-spin -ml-1 mr-1.5 h-4 w-4 text-current inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ${isDraft ? 'Saving Draft...' : 'Submitting to Workflow...'}</span>`;
+    }
+
     try {
         const memo = await apiCall('/memos', {
             method: 'POST',
@@ -770,6 +778,11 @@ async function submitMemoForm(isDraft = false) {
         showView('memo-detail', memo.id);
     } catch (e) {
         showToast(e.message, 'error');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origHtml;
+        }
     }
 }
 
@@ -919,6 +932,23 @@ function renderWorkflowActionBar(memo) {
         resubmitContainer.classList.remove('hidden');
         document.getElementById('resubmit-title').value = memo.title;
         document.getElementById('resubmit-body').value = memo.body.replace(/<[^>]*>/g, '');
+        return;
+    }
+
+    // Check if memo is Draft and user is author or admin -> Show Submit to Workflow banner
+    if (memo.status === 'Draft' && (isAuthor || appState.user.role === 'admin')) {
+        actionContainer.innerHTML = `
+            <div class="p-5 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl mb-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                    <h4 class="font-black text-indigo-950 text-sm">Draft Memorandum</h4>
+                    <p class="text-xs text-indigo-800 mt-0.5 font-medium">This memo is currently saved as a draft. Click below to initiate sequential workflow review.</p>
+                </div>
+                <button id="btn-submit-draft-workflow" onclick="submitDraftToWorkflow(${memo.id})" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition shrink-0">
+                    <i data-lucide="send" class="w-4 h-4"></i> Submit to Workflow
+                </button>
+            </div>
+        `;
+        if (window.lucide) lucide.createIcons();
         return;
     }
 
@@ -1207,14 +1237,45 @@ async function saveManagedSteps() {
     }
 }
 
+async function submitDraftToWorkflow(memoId) {
+    const btn = document.getElementById('btn-submit-draft-workflow');
+    let origHtml = '';
+    if (btn) {
+        origHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<span class="inline-flex items-center gap-1.5"><svg class="animate-spin -ml-1 mr-1.5 h-3.5 w-3.5 text-white inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Submitting to Workflow...</span>`;
+    }
+    try {
+        await apiCall(`/memos/${memoId}/submit`, { method: 'POST' });
+        showToast('Memo successfully submitted to workflow!', 'success');
+        renderMemoDetailView(memoId);
+        loadInitialData();
+    } catch (e) {
+        showToast(e.message, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    }
+}
+
 async function submitResubmission(memoId) {
     const title = document.getElementById('resubmit-title').value.trim();
     const body = document.getElementById('resubmit-body').value.trim();
     const summary = document.getElementById('resubmit-summary').value.trim();
+    const btn = document.getElementById('btn-submit-resubmit');
 
     if (!title || !body) {
         showToast('Title and content cannot be blank', 'warning');
         return;
+    }
+
+    let origHtml = '';
+    if (btn) {
+        origHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<span class="inline-flex items-center gap-1.5"><svg class="animate-spin -ml-1 mr-1.5 h-3.5 w-3.5 text-white inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Submitting Revisions...</span>`;
     }
 
     try {
@@ -1228,8 +1289,14 @@ async function submitResubmission(memoId) {
         });
         showToast('Memo updated and resubmitted! Version snapshot recorded.', 'success');
         renderMemoDetailView(memoId);
+        loadInitialData();
     } catch (e) {
         showToast(e.message, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
     }
 }
 
