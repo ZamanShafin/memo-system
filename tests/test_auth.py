@@ -1,16 +1,7 @@
-import pytest
 from fastapi.testclient import TestClient
 from app.main import app
-from app.database import Base, engine
-from app.seed import seed_database
 
 client = TestClient(app)
-
-@pytest.fixture(scope="module", autouse=True)
-def setup_test_db():
-    Base.metadata.create_all(bind=engine)
-    seed_database()
-    yield
 
 def test_login_success():
     res = client.post("/api/v1/auth/login", json={

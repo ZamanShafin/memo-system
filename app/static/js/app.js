@@ -941,17 +941,26 @@ function renderWorkflowActionBar(memo) {
                             <h4 class="font-black text-amber-950 text-sm">Action Required on this Memo</h4>
                             ${delegateLabel}
                         </div>
-                        <p class="text-xs text-amber-800 mt-0.5 font-medium">As <b>${activeStep.role_name}</b>, please review the contents and choose a workflow decision below.</p>
+                        <p class="text-xs text-amber-800 mt-0.5 font-medium">As <b>${activeStep.role_name}</b>, choose an action below or dynamically route to colleagues.</p>
                     </div>
                     <div class="flex items-center gap-2 flex-wrap">
-                        <button onclick="openActionModal('approve', ${memo.id})" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
+                        <button onclick="openActionModal('approve', ${memo.id})" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
                             <i data-lucide="check-circle" class="w-4 h-4"></i> Approve Step
                         </button>
-                        <button onclick="openActionModal('request_changes', ${memo.id})" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
+                        <button onclick="openActionModal('approve_insert', ${memo.id})" class="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
+                            <i data-lucide="user-plus" class="w-4 h-4"></i> Approve & Add Reviewer
+                        </button>
+                        <button onclick="openActionModal('reassign', ${memo.id})" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
+                            <i data-lucide="corner-up-right" class="w-4 h-4"></i> Decline & Reroute
+                        </button>
+                        <button onclick="openActionModal('request_changes', ${memo.id})" class="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
                             <i data-lucide="edit-3" class="w-4 h-4"></i> Request Changes
                         </button>
-                        <button onclick="openActionModal('reject', ${memo.id})" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
-                            <i data-lucide="x-circle" class="w-4 h-4"></i> Reject Memo
+                        <button onclick="openActionModal('reject', ${memo.id})" class="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
+                            <i data-lucide="x-circle" class="w-4 h-4"></i> Reject
+                        </button>
+                        <button onclick="openManageStepsModal(${memo.id})" class="px-3 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
+                            <i data-lucide="git-merge" class="w-4 h-4"></i> Modify Steps
                         </button>
                     </div>
                 </div>
@@ -983,28 +992,53 @@ function openActionModal(actionType, memoId) {
     modal.setAttribute('data-memo-id', memoId);
 
     const titleEl = document.getElementById('action-modal-title');
+    const descEl = document.getElementById('action-modal-desc');
     const commentEl = document.getElementById('action-modal-comment');
-    const reqNote = document.getElementById('action-modal-required-note');
     const submitBtn = document.getElementById('action-modal-submit-btn');
+    const reassignBox = document.getElementById('action-modal-reassign-container');
+    const insertBox = document.getElementById('action-modal-insert-container');
+    const reassignSelect = document.getElementById('action-modal-reassign-user');
+    const insertSelect = document.getElementById('action-modal-insert-user');
 
     commentEl.value = '';
+    reassignBox.classList.add('hidden');
+    insertBox.classList.add('hidden');
+
+    // Populate user selects
+    const userOptions = (appState.orgUsers || [])
+        .filter(u => u.id !== appState.user.id)
+        .map(u => `<option value="${u.id}">${u.full_name} (${u.designation || u.role})</option>`)
+        .join('');
 
     if (actionType === 'approve') {
         titleEl.textContent = 'Approve Memo Step';
-        reqNote.classList.add('hidden');
-        submitBtn.className = 'px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg';
+        descEl.textContent = 'Sign off and advance this memo to the next designated step in sequence.';
+        submitBtn.className = 'px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl';
         submitBtn.textContent = 'Confirm Approval';
+    } else if (actionType === 'approve_insert') {
+        titleEl.textContent = 'Approve & Insert Intermediate Reviewer';
+        descEl.textContent = 'Endorse this memo and route to a colleague for additional review before downstream steps.';
+        insertBox.classList.remove('hidden');
+        insertSelect.innerHTML = userOptions;
+        document.getElementById('action-modal-insert-role').value = 'Specialist Sign-off';
+        submitBtn.className = 'px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl';
+        submitBtn.textContent = 'Approve & Route to Colleague';
+    } else if (actionType === 'reassign') {
+        titleEl.textContent = 'Decline & Reroute Step to Colleague';
+        descEl.textContent = 'Decline taking action and reassign this exact review step to another person.';
+        reassignBox.classList.remove('hidden');
+        reassignSelect.innerHTML = userOptions;
+        submitBtn.className = 'px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl';
+        submitBtn.textContent = 'Confirm Reassignment';
     } else if (actionType === 'request_changes') {
         titleEl.textContent = 'Request Changes / Revisions';
-        reqNote.classList.remove('hidden');
-        reqNote.textContent = 'Feedback comment is mandatory explaining required changes.';
-        submitBtn.className = 'px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg';
+        descEl.textContent = 'Send memo back to the author with required revision instructions.';
+        submitBtn.className = 'px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl';
         submitBtn.textContent = 'Send Change Request';
     } else if (actionType === 'reject') {
         titleEl.textContent = 'Reject Memo';
-        reqNote.classList.remove('hidden');
-        reqNote.textContent = 'A rejection reason is required and will terminate the workflow.';
-        submitBtn.className = 'px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg';
+        descEl.textContent = 'Provide a mandatory reason and terminate this memo workflow.';
+        submitBtn.className = 'px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl';
         submitBtn.textContent = 'Confirm Rejection';
     }
 }
@@ -1025,16 +1059,40 @@ async function submitWorkflowAction() {
         return;
     }
 
+    const payload = { action, comment };
+
+    if (action === 'reassign') {
+        const targetUserId = parseInt(document.getElementById('action-modal-reassign-user').value);
+        if (!targetUserId) {
+            showToast('Please select a colleague to reroute this memo to', 'warning');
+            return;
+        }
+        payload.reassign_to_user_id = targetUserId;
+    } else if (action === 'approve_insert') {
+        const targetUserId = parseInt(document.getElementById('action-modal-insert-user').value);
+        const roleName = document.getElementById('action-modal-insert-role').value.trim() || 'Specialist Review';
+        const stepType = document.getElementById('action-modal-insert-type').value || 'approval';
+        if (!targetUserId) {
+            showToast('Please select an intermediate reviewer', 'warning');
+            return;
+        }
+        payload.insert_step = {
+            assigned_user_id: targetUserId,
+            role_name: roleName,
+            step_type: stepType
+        };
+    }
+
     const origText = submitBtn.innerHTML;
     submitBtn.disabled = true;
-    submitBtn.innerHTML = `<span class="inline-flex items-center gap-1.5"><svg class="animate-spin -ml-1 mr-1 h-3.5 w-3.5 text-white inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Executing ${action}...</span>`;
+    submitBtn.innerHTML = `<span class="inline-flex items-center gap-1.5"><svg class="animate-spin -ml-1 mr-1 h-3.5 w-3.5 text-white inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...</span>`;
 
     try {
-        const updated = await apiCall(`/workflow/${memoId}/action`, {
+        await apiCall(`/workflow/${memoId}/action`, {
             method: 'POST',
-            body: JSON.stringify({ action, comment })
+            body: JSON.stringify(payload)
         });
-        showToast(`Action '${action}' executed successfully!`, 'success');
+        showToast(`Workflow action executed successfully!`, 'success');
         closeActionModal();
 
         // Immediately update cached inboxes
@@ -1042,7 +1100,7 @@ async function submitWorkflowAction() {
             appState.inboxMemos = appState.inboxMemos.filter(m => m.id != memoId);
         }
         
-        // Re-render detail view directly with eager-loaded updated memo
+        // Re-render detail view directly
         renderMemoDetailView(memoId);
         
         // Refresh background cache
@@ -1052,6 +1110,100 @@ async function submitWorkflowAction() {
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = origText;
+    }
+}
+
+// -------------------------------------------------------------
+// DYNAMIC WORKFLOW STEPS MODIFIER
+// -------------------------------------------------------------
+let currentEditingDownstreamSteps = [];
+
+async function openManageStepsModal(memoId) {
+    const modal = document.getElementById('manage-steps-modal');
+    modal.classList.remove('hidden');
+    modal.setAttribute('data-memo-id', memoId);
+
+    // Fetch live memo
+    try {
+        const memo = await apiCall(`/memos/${memoId}`);
+        const downstream = (memo.workflow_steps || []).filter(s => s.step_index > memo.current_step_index);
+        currentEditingDownstreamSteps = downstream.map(s => ({
+            role_name: s.role_name,
+            step_type: s.step_type,
+            assigned_user_id: s.assigned_user_id
+        }));
+        renderManageStepsList();
+        if (window.lucide) lucide.createIcons();
+    } catch (e) {
+        showToast(e.message, 'error');
+    }
+}
+
+function closeManageStepsModal() {
+    document.getElementById('manage-steps-modal').classList.add('hidden');
+}
+
+function renderManageStepsList() {
+    const container = document.getElementById('manage-steps-list');
+    if (!container) return;
+
+    if (currentEditingDownstreamSteps.length === 0) {
+        container.innerHTML = `<div class="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center text-xs text-slate-500">No upcoming downstream steps. Once this step is approved, the memo will reach final completion.</div>`;
+        return;
+    }
+
+    const userOptions = (appState.orgUsers || []).map(u => `<option value="${u.id}">${u.full_name} (${u.designation || u.role})</option>`).join('');
+
+    container.innerHTML = currentEditingDownstreamSteps.map((step, idx) => `
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-3 text-xs">
+            <div class="flex items-center gap-2 flex-1">
+                <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 font-bold flex items-center justify-center text-[10px] shrink-0">${idx + 1}</span>
+                <input type="text" value="${step.role_name}" onchange="currentEditingDownstreamSteps[${idx}].role_name = this.value" placeholder="Role Name" class="px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg w-1/3">
+                <select onchange="currentEditingDownstreamSteps[${idx}].assigned_user_id = parseInt(this.value)" class="px-2 py-1.5 text-xs border border-slate-300 rounded-lg flex-1 bg-white">
+                    ${(appState.orgUsers || []).map(u => `<option value="${u.id}" ${u.id === step.assigned_user_id ? 'selected' : ''}>${u.full_name}</option>`).join('')}
+                </select>
+                <select onchange="currentEditingDownstreamSteps[${idx}].step_type = this.value" class="px-2 py-1.5 text-xs border border-slate-300 rounded-lg bg-white w-24">
+                    <option value="approval" ${step.step_type === 'approval' ? 'selected' : ''}>Approval</option>
+                    <option value="review" ${step.step_type === 'review' ? 'selected' : ''}>Review</option>
+                </select>
+            </div>
+            <button onclick="removeDynamicStepRow(${idx})" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition" title="Remove Step">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+        </div>
+    `).join('');
+    if (window.lucide) lucide.createIcons();
+}
+
+function addDynamicStepRow() {
+    const defaultUser = appState.orgUsers && appState.orgUsers.length > 0 ? appState.orgUsers[0].id : 1;
+    currentEditingDownstreamSteps.push({
+        role_name: 'Additional Reviewer',
+        step_type: 'approval',
+        assigned_user_id: defaultUser
+    });
+    renderManageStepsList();
+}
+
+function removeDynamicStepRow(idx) {
+    currentEditingDownstreamSteps.splice(idx, 1);
+    renderManageStepsList();
+}
+
+async function saveManagedSteps() {
+    const modal = document.getElementById('manage-steps-modal');
+    const memoId = modal.getAttribute('data-memo-id');
+
+    try {
+        await apiCall(`/workflow/${memoId}/steps`, {
+            method: 'PUT',
+            body: JSON.stringify({ steps: currentEditingDownstreamSteps })
+        });
+        showToast('Workflow steps updated successfully!', 'success');
+        closeManageStepsModal();
+        renderMemoDetailView(memoId);
+    } catch (e) {
+        showToast(e.message, 'error');
     }
 }
 

@@ -269,8 +269,13 @@ class MemoUpdate(BaseModel):
     summary_of_changes: Optional[str] = None  # When resubmitting after changes requested
 
 class WorkflowActionRequest(BaseModel):
-    action: str  # "approve", "reject", "request_changes", "forward"
+    action: str  # "approve", "reject", "request_changes", "forward", "reassign", "approve_insert"
     comment: Optional[str] = None
+    reassign_to_user_id: Optional[int] = None
+    insert_step: Optional[WorkflowStepCreate] = None
+
+class WorkflowStepsUpdateRequest(BaseModel):
+    steps: List[WorkflowStepCreate]
 
 class MemoOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)

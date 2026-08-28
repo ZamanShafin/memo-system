@@ -3,7 +3,7 @@ from typing import Optional, Tuple
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
-from app import models
+from app import models, schemas
 from app.services import audit_service, notification_service, version_service
 
 def is_user_authorized_for_step(
@@ -134,12 +134,15 @@ def process_workflow_action(
     db: Session,
     memo: models.Memo,
     user: models.User,
-    action: str,  # "approve", "reject", "request_changes", "forward"
+    action: str,  # "approve", "reject", "request_changes", "forward", "reassign", "approve_insert"
     comment: Optional[str] = None,
+    reassign_to_user_id: Optional[int] = None,
+    insert_step: Optional[schemas.WorkflowStepCreate] = None,
     ip_address: Optional[str] = None
 ) -> models.Memo:
     """
-    Executes a sequential workflow action strictly validating current participant turn.
+    Executes a sequential workflow action strictly validating current participant turn,
+    supporting dynamic re-assignment, and ad-hoc intermediate reviewer step insertion.
     """
     if memo.status in ["Draft", "Approved", "Rejected", "Cancelled"]:
         raise HTTPException(
@@ -175,8 +178,167 @@ def process_workflow_action(
     
     now = datetime.datetime.now(datetime.timezone.utc)
     action = action.lower()
+
+    # 1. DECLINE & REASSIGN / REROUTE
+    if action in ["reassign", "decline_reroute"]:
+        if not reassign_to_user_id:
+            raise HTTPException(status_code=400, detail="Target user ID for reassignment is required")
+        
+        target_user = db.query(models.User).filter(
+            models.User.id == reassign_to_user_id,
+            models.User.org_id == memo.org_id,
+            models.User.is_active == True
+        ).first()
+        if not target_user:
+            raise HTTPException(status_code=404, detail="Selected colleague not found or inactive")
+        
+        orig_assignee_name = current_step.assigned_user.full_name if current_step.assigned_user else "Reviewer"
+        current_step.assigned_user_id = target_user.id
+        current_step.status = "pending"
+        current_step.is_current = True
+        memo.current_assignee_id = target_user.id
+
+        # Comment in discussion
+        c_text = f"[Declined & Rerouted] {user.full_name} declined and rerouted this step ({current_step.role_name}) to {target_user.full_name}."
+        if comment and comment.strip():
+            c_text += f" Note: {comment.strip()}"
+        
+        db.add(models.MemoComment(
+            memo_id=memo.id,
+            org_id=memo.org_id,
+            user_id=user.id,
+            comment_type="general",
+            text=c_text
+        ))
+
+        # Notify new assignee
+        notification_service.create_notification(
+            db=db,
+            org_id=memo.org_id,
+            user_id=target_user.id,
+            memo_id=memo.id,
+            title="Memo Rerouted to You",
+            message=f"Memo '{memo.memo_number}: {memo.title}' was rerouted to you by {user.full_name} for {current_step.role_name}.",
+            event_type="action_required"
+        )
+
+        # Notify author
+        notification_service.create_notification(
+            db=db,
+            org_id=memo.org_id,
+            user_id=memo.author_id,
+            memo_id=memo.id,
+            title="Workflow Rerouted",
+            message=f"Step '{current_step.role_name}' on memo '{memo.memo_number}' was rerouted from {orig_assignee_name} to {target_user.full_name}.",
+            event_type="general"
+        )
+
+        db.commit()
+        db.refresh(memo)
+
+        audit_service.log_event(
+            db=db,
+            org_id=memo.org_id,
+            user_id=user.id,
+            event_type="WORKFLOW_REASSIGN",
+            object_type="MemoWorkflowStep",
+            object_id=str(current_step.id),
+            description=f"Step #{current_step.step_index} rerouted to {target_user.full_name} by {user.full_name}",
+            details={"reassigned_to_user_id": target_user.id, "comment": comment},
+            ip_address=ip_address
+        )
+        return memo
     
-    if action in ["approve", "forward"]:
+    # 2. APPROVE & INSERT INTERMEDIATE REVIEWER
+    elif action == "approve_insert" or (action in ["approve", "forward"] and insert_step is not None):
+        target_user = db.query(models.User).filter(
+            models.User.id == insert_step.assigned_user_id,
+            models.User.org_id == memo.org_id,
+            models.User.is_active == True
+        ).first()
+        if not target_user:
+            raise HTTPException(status_code=404, detail="Selected intermediate reviewer not found or inactive")
+
+        # Mark current step completed
+        current_step.status = "completed"
+        current_step.action_taken = "approved"
+        current_step.action_by_user_id = user.id
+        current_step.on_behalf_of_user_id = on_behalf_of
+        current_step.action_timestamp = now
+        current_step.comments = comment
+        current_step.is_current = False
+
+        # Shift downstream steps down by 1
+        downstream = db.query(models.MemoWorkflowStep).filter(
+            models.MemoWorkflowStep.memo_id == memo.id,
+            models.MemoWorkflowStep.step_index > memo.current_step_index
+        ).order_by(models.MemoWorkflowStep.step_index.desc()).all()
+        for ds in downstream:
+            ds.step_index += 1
+
+        # Insert new intermediate step
+        inserted_index = memo.current_step_index + 1
+        new_step = models.MemoWorkflowStep(
+            memo_id=memo.id,
+            step_index=inserted_index,
+            step_type=insert_step.step_type or "approval",
+            role_name=insert_step.role_name.strip() or f"Specialist Review ({target_user.full_name})",
+            assigned_user_id=target_user.id,
+            status="pending",
+            is_current=True
+        )
+        db.add(new_step)
+
+        # Advance memo pointer to inserted step
+        memo.current_step_index = inserted_index
+        memo.current_assignee_id = target_user.id
+        memo.status = "Pending Review" if new_step.step_type == "review" else "Pending Approval"
+
+        # Discussion Comment
+        c_text = f"[Approved & Inserted Reviewer] {user.full_name} approved and inserted intermediate step '{new_step.role_name}' assigned to {target_user.full_name}."
+        if comment and comment.strip():
+            c_text += f" Remarks: {comment.strip()}"
+
+        db.add(models.MemoComment(
+            memo_id=memo.id,
+            org_id=memo.org_id,
+            user_id=user.id,
+            comment_type="approval",
+            text=c_text
+        ))
+
+        # Notify inserted reviewer
+        notification_service.notify_workflow_assignee(db, memo, target_user.id, new_step.role_name)
+
+        # Notify author
+        notification_service.create_notification(
+            db=db,
+            org_id=memo.org_id,
+            user_id=memo.author_id,
+            memo_id=memo.id,
+            title="Workflow Extended",
+            message=f"Your memo '{memo.memo_number}' was approved by {user.full_name}, who inserted an additional review step with {target_user.full_name}.",
+            event_type="approved"
+        )
+
+        db.commit()
+        db.refresh(memo)
+
+        audit_service.log_event(
+            db=db,
+            org_id=memo.org_id,
+            user_id=user.id,
+            event_type="WORKFLOW_INSERT_STEP",
+            object_type="Memo",
+            object_id=str(memo.id),
+            description=f"Intermediate step '{new_step.role_name}' inserted for {target_user.full_name} by {user.full_name}",
+            details={"inserted_user_id": target_user.id, "step_index": inserted_index, "comment": comment},
+            ip_address=ip_address
+        )
+        return memo
+
+    # 3. STANDARD APPROVE / FORWARD TO NEXT PRE-DEFINED STEP
+    elif action in ["approve", "forward"]:
         current_step.status = "completed"
         current_step.action_taken = "approved" if action == "approve" else "forwarded"
         current_step.action_by_user_id = user.id
@@ -466,6 +628,82 @@ def resubmit_memo_after_changes(
         object_id=str(memo.id),
         description=f"Memo '{memo.memo_number}' revised and resubmitted by {user.full_name}. Summary: {summary_of_changes or 'None'}",
         details={"summary_of_changes": summary_of_changes},
+        ip_address=ip_address
+    )
+    return memo
+
+
+def modify_downstream_steps(
+    db: Session,
+    memo: models.Memo,
+    user: models.User,
+    new_downstream_steps: list,
+    ip_address: Optional[str] = None
+) -> models.Memo:
+    """
+    Allows the current active reviewer or admin to dynamically add, remove,
+    or adjust upcoming downstream workflow participants.
+    """
+    if memo.status in ["Approved", "Rejected", "Draft", "Cancelled"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot modify workflow steps on finalized or draft memos"
+        )
+    
+    if memo.current_assignee_id != user.id and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the current active reviewer or admin can modify downstream workflow participants"
+        )
+    
+    # Delete existing downstream steps
+    db.query(models.MemoWorkflowStep).filter(
+        models.MemoWorkflowStep.memo_id == memo.id,
+        models.MemoWorkflowStep.step_index > memo.current_step_index
+    ).delete()
+    
+    # Re-create downstream steps
+    curr_idx = memo.current_step_index
+    for offset, step_data in enumerate(new_downstream_steps, start=1):
+        target_u = db.query(models.User).filter(
+            models.User.id == step_data.assigned_user_id,
+            models.User.org_id == memo.org_id,
+            models.User.is_active == True
+        ).first()
+        if not target_u:
+            raise HTTPException(status_code=400, detail=f"Participant #{step_data.assigned_user_id} is invalid or inactive")
+        
+        w_step = models.MemoWorkflowStep(
+            memo_id=memo.id,
+            step_index=curr_idx + offset,
+            step_type=step_data.step_type or "approval",
+            role_name=step_data.role_name.strip() or target_u.designation or target_u.full_name,
+            assigned_user_id=target_u.id,
+            status="pending",
+            is_current=False
+        )
+        db.add(w_step)
+        
+    db.add(models.MemoComment(
+        memo_id=memo.id,
+        org_id=memo.org_id,
+        user_id=user.id,
+        comment_type="general",
+        text=f"[Workflow Modified] {user.full_name} updated the upcoming downstream workflow participants ({len(new_downstream_steps)} remaining steps)."
+    ))
+    
+    db.commit()
+    db.refresh(memo)
+    
+    audit_service.log_event(
+        db=db,
+        org_id=memo.org_id,
+        user_id=user.id,
+        event_type="WORKFLOW_STEPS_MODIFIED",
+        object_type="Memo",
+        object_id=str(memo.id),
+        description=f"Downstream workflow steps updated for memo '{memo.memo_number}' by {user.full_name}",
+        details={"downstream_steps_count": len(new_downstream_steps)},
         ip_address=ip_address
     )
     return memo

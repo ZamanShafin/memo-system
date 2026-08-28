@@ -18,7 +18,7 @@ def execute_workflow_action(
     db: Session = Depends(get_db)
 ):
     """
-    Executes a workflow action (approve, reject, request_changes, forward) on the current step.
+    Executes a workflow action (approve, reject, request_changes, forward, reassign, approve_insert) on the current step.
     Strictly verifies sequential order and participant turn (or active delegate).
     """
     memo = db.query(models.Memo).filter(
@@ -35,6 +35,8 @@ def execute_workflow_action(
         user=current_user,
         action=action_req.action,
         comment=action_req.comment,
+        reassign_to_user_id=action_req.reassign_to_user_id,
+        insert_step=action_req.insert_step,
         ip_address=request.client.host if request.client else None
     )
 
@@ -43,6 +45,38 @@ def execute_workflow_action(
         models.Memo.id == memo_id
     ).first()
     
+    return updated_memo
+
+@router.put("/{memo_id}/steps", response_model=schemas.MemoOut)
+def update_memo_workflow_steps(
+    memo_id: int,
+    steps_req: schemas.WorkflowStepsUpdateRequest,
+    request: Request,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Allows the current active reviewer or admin to dynamically add, remove,
+    or adjust upcoming downstream workflow participants.
+    """
+    memo = db.query(models.Memo).filter(
+        models.Memo.id == memo_id,
+        models.Memo.org_id == current_user.org_id
+    ).first()
+    if not memo:
+        raise HTTPException(status_code=404, detail="Memo not found")
+
+    workflow_service.modify_downstream_steps(
+        db=db,
+        memo=memo,
+        user=current_user,
+        new_downstream_steps=steps_req.steps,
+        ip_address=request.client.host if request.client else None
+    )
+
+    updated_memo = db.query(models.Memo).options(*MEMO_EAGER_LOAD).filter(
+        models.Memo.id == memo_id
+    ).first()
     return updated_memo
 
 @router.get("/{memo_id}/steps", response_model=List[schemas.WorkflowStepOut])

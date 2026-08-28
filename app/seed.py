@@ -5,13 +5,15 @@ from app.database import SessionLocal, engine, Base
 from app import models, security
 from app.services import audit_service, version_service, notification_service
 
-def seed_database(seed_demo_memos: bool = False):
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
+def seed_database(seed_demo_memos: bool = False, db_session = None):
+    if not db_session:
+        Base.metadata.create_all(bind=engine)
+    db = db_session or SessionLocal()
     
     # Check if already seeded
     if db.query(models.Organization).first():
-        db.close()
+        if not db_session:
+            db.close()
         return
 
     print("Seeding clean multi-tenant enterprise users, departments, and templates...")
