@@ -790,7 +790,7 @@ function addWorkflowStepRow(index, defaultRole = '', defaultType = 'approval', d
     const stepCount = container.children.length + 1;
 
     const row = document.createElement('div');
-    row.className = 'workflow-step-row flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg';
+    row.className = 'workflow-step-row flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl relative';
     row.setAttribute('data-step-index', stepCount);
 
     const userOptions = appState.orgUsers.map(u => 
@@ -798,31 +798,36 @@ function addWorkflowStepRow(index, defaultRole = '', defaultType = 'approval', d
     ).join('');
 
     row.innerHTML = `
-        <div class="w-8 h-8 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0">
-            ${stepCount}
+        <div class="flex items-center justify-between w-full sm:w-auto">
+            <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0">
+                ${stepCount}
+            </div>
+            <button type="button" onclick="this.closest('.workflow-step-row').remove(); renumberWorkflowSteps();" class="sm:hidden text-slate-400 hover:text-rose-600 p-1">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
         </div>
-        <div class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div class="w-full flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div>
-                <label class="block text-[11px] font-semibold text-slate-500 uppercase">Role / Position</label>
-                <input type="text" class="step-role-input w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-indigo-500" value="${defaultRole || 'Approver'}" placeholder="e.g. Department Head">
+                <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-0.5">Role / Position</label>
+                <input type="text" class="step-role-input w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-xl focus:ring-1 focus:ring-indigo-500 bg-white" value="${defaultRole || 'Approver'}" placeholder="e.g. Department Head">
             </div>
             <div>
-                <label class="block text-[11px] font-semibold text-slate-500 uppercase">Step Type</label>
-                <select class="step-type-select w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-indigo-500">
+                <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-0.5">Step Type</label>
+                <select class="step-type-select w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-xl focus:ring-1 focus:ring-indigo-500 bg-white">
                     <option value="approval" ${defaultType === 'approval' ? 'selected' : ''}>Approval</option>
                     <option value="review" ${defaultType === 'review' ? 'selected' : ''}>Review / Endorsement</option>
                     <option value="final_approval" ${defaultType === 'final_approval' ? 'selected' : ''}>Final Executive Sanction</option>
                 </select>
             </div>
             <div>
-                <label class="block text-[11px] font-semibold text-slate-500 uppercase">Assigned User</label>
-                <select class="step-user-select w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-indigo-500">
+                <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-0.5">Assigned User</label>
+                <select class="step-user-select w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-xl focus:ring-1 focus:ring-indigo-500 bg-white">
                     <option value="">Select Assignee</option>
                     ${userOptions}
                 </select>
             </div>
         </div>
-        <button type="button" onclick="this.closest('.workflow-step-row').remove(); renumberWorkflowSteps();" class="text-slate-400 hover:text-rose-600 p-1">
+        <button type="button" onclick="this.closest('.workflow-step-row').remove(); renumberWorkflowSteps();" class="hidden sm:block text-slate-400 hover:text-rose-600 p-1">
             <i data-lucide="trash-2" class="w-4 h-4"></i>
         </button>
     `;
@@ -1026,7 +1031,7 @@ function renderWorkflowStepper(memo) {
     }
 
     const steps = memo.workflow_steps;
-    let html = '<div class="flex flex-col md:flex-row items-start md:items-center gap-2 overflow-x-auto py-2">';
+    let html = '<div class="stepper-horizontal flex items-center gap-3 overflow-x-auto py-2 px-1 no-scrollbar scroll-smooth">';
 
     steps.forEach((step, idx) => {
         const isCompleted = step.status === 'completed';
@@ -1039,25 +1044,25 @@ function renderWorkflowStepper(memo) {
 
         if (isCompleted) {
             iconBg = 'bg-emerald-600 text-white border-emerald-600';
-            iconContent = '<i data-lucide="check" class="w-4 h-4"></i>';
+            iconContent = '<i data-lucide="check" class="w-3.5 h-3.5"></i>';
         } else if (isRejected) {
             iconBg = 'bg-rose-600 text-white border-rose-600';
-            iconContent = '<i data-lucide="x" class="w-4 h-4"></i>';
+            iconContent = '<i data-lucide="x" class="w-3.5 h-3.5"></i>';
         } else if (isChangesReq) {
             iconBg = 'bg-amber-600 text-white border-amber-600';
-            iconContent = '<i data-lucide="alert-circle" class="w-4 h-4"></i>';
+            iconContent = '<i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>';
         } else if (isCurrent) {
             iconBg = 'bg-amber-500 text-white border-amber-500 step-current-pulse';
-            iconContent = '<i data-lucide="clock" class="w-4 h-4"></i>';
+            iconContent = '<i data-lucide="clock" class="w-3.5 h-3.5"></i>';
         }
 
         const actionText = step.action_taken ? `(${step.action_taken})` : (isCurrent ? '(Action Pending)' : '');
         const delegateNote = step.on_behalf_of_user ? `<div class="text-[10px] text-indigo-600 font-semibold">via ${step.action_by_user?.full_name} (Delegate)</div>` : '';
 
         html += `
-            <div class="flex items-center gap-2 flex-shrink-0">
+            <div class="flex items-center gap-2 flex-shrink-0 bg-slate-50/80 sm:bg-transparent p-2 sm:p-0 rounded-xl border sm:border-0 border-slate-200/80">
                 <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border ${iconBg}">
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs border ${iconBg} shrink-0">
                         ${iconContent}
                     </div>
                     <div class="text-xs">
@@ -1066,7 +1071,7 @@ function renderWorkflowStepper(memo) {
                         ${delegateNote}
                     </div>
                 </div>
-                ${idx < steps.length - 1 ? '<div class="hidden md:block w-8 h-0.5 bg-slate-300 mx-1"></div>' : ''}
+                ${idx < steps.length - 1 ? '<div class="w-4 sm:w-8 h-0.5 bg-slate-300 mx-1 shrink-0"></div>' : ''}
             </div>
         `;
     });

@@ -121,3 +121,74 @@ code, pre, .font-mono {
     font-weight: 600;
     border-radius: 9999px;
 }
+
+/* ============================================================ */
+/* MOBILE & TOUCH OPTIMIZATION UTILITIES */
+/* ============================================================ */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Prevent auto-zoom on iOS focus */
+@media (max-width: 640px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="date"],
+    select,
+    textarea {
+        font-size: 15px !important;
+    }
+}
+
+/* Responsive Touch Target Sizing */
+.touch-target {
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Horizontal Scroll Container styling for mobile tables and steppers */
+.mobile-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 1rem;
+    border: 1px solid #e2e8f0;
+}
+
+/* Stepper horizontal flow on mobile */
+.stepper-horizontal {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.75rem;
+    gap: 0.5rem;
+}
+.stepper-horizontal::-webkit-scrollbar {
+    height: 4px;
+}
+.stepper-horizontal::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+/* Responsive Modal Centering on Mobile */
+.modal-overlay-mobile {
+    padding: 0.75rem;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-dialog-mobile {
+    width: 100%;
+    max-width: 32rem;
+    max-height: 90vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
