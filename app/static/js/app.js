@@ -2048,10 +2048,14 @@ async function renderAdminUsers() {
             <tbody class="divide-y divide-slate-100 bg-white">
                 ${users.map(u => {
                     const dept = appState.departments.find(d => d.id === u.department_id);
+                    const isSelf = appState.user && u.id === appState.user.id;
                     return `
                         <tr class="hover:bg-slate-50 transition">
                             <td class="px-4 py-3">
-                                <div class="font-bold text-slate-900">${u.full_name}</div>
+                                <div class="font-bold text-slate-900 flex items-center gap-1.5">
+                                    ${u.full_name}
+                                    ${isSelf ? '<span class="px-1.5 py-0.5 text-[9px] font-black bg-indigo-100 text-indigo-800 rounded">You</span>' : ''}
+                                </div>
                                 <div class="text-slate-500 text-[11px]">${u.email}</div>
                             </td>
                             <td class="px-4 py-3 text-slate-700 font-medium">${u.designation || '—'}</td>
@@ -2072,9 +2076,15 @@ async function renderAdminUsers() {
                                 <button onclick="showEditUserModal(${u.id})" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[11px] transition">
                                     Edit / Dept
                                 </button>
-                                <button onclick="toggleUserActive(${u.id}, ${!u.is_active})" class="px-2.5 py-1 font-bold rounded-lg text-[11px] transition ${u.is_active ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'}">
-                                    ${u.is_active ? 'Deactivate' : 'Activate'}
-                                </button>
+                                ${isSelf ? `
+                                    <span class="px-2.5 py-1 font-semibold rounded-lg text-[11px] bg-slate-100 text-slate-400 cursor-not-allowed inline-block" title="Administrators cannot deactivate their own active account">
+                                        Protected
+                                    </span>
+                                ` : `
+                                    <button onclick="toggleUserActive(${u.id}, ${!u.is_active})" class="px-2.5 py-1 font-bold rounded-lg text-[11px] transition ${u.is_active ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'}">
+                                        ${u.is_active ? 'Deactivate' : 'Activate'}
+                                    </button>
+                                `}
                             </td>
                         </tr>
                     `;
@@ -2091,10 +2101,19 @@ function showCreateUserModal() {
     document.getElementById('user-modal-email').value = '';
     document.getElementById('user-modal-designation').value = '';
     document.getElementById('user-modal-dept').value = '';
-    document.getElementById('user-modal-role').value = 'user';
+    
+    const roleSelect = document.getElementById('user-modal-role');
+    roleSelect.value = 'user';
+    roleSelect.disabled = false;
+
     document.getElementById('user-modal-pwd').value = '';
     document.getElementById('user-modal-pwd-label').textContent = 'Password *';
     document.getElementById('user-modal-pwd').required = true;
+    
+    const activeBox = document.getElementById('user-modal-active');
+    activeBox.checked = true;
+    activeBox.disabled = false;
+
     document.getElementById('user-modal-status-row').classList.add('hidden');
     document.getElementById('user-modal').classList.remove('hidden');
 }
@@ -2102,18 +2121,34 @@ function showCreateUserModal() {
 function showEditUserModal(userId) {
     const user = appState.orgUsers.find(u => u.id === userId);
     if (!user) return;
+    const isSelf = appState.user && user.id === appState.user.id;
+
     document.getElementById('user-modal-id').value = user.id;
-    document.getElementById('user-modal-title').textContent = `Edit User: ${user.full_name}`;
+    document.getElementById('user-modal-title').textContent = `Edit User: ${user.full_name}${isSelf ? ' (You)' : ''}`;
     document.getElementById('user-modal-name').value = user.full_name;
     document.getElementById('user-modal-email').value = user.email;
     document.getElementById('user-modal-designation').value = user.designation || '';
     document.getElementById('user-modal-dept').value = user.department_id || '';
-    document.getElementById('user-modal-role').value = user.role;
+    
+    const roleSelect = document.getElementById('user-modal-role');
+    roleSelect.value = user.role;
+    roleSelect.disabled = isSelf; // Cannot demote self
+    
     document.getElementById('user-modal-pwd').value = '';
     document.getElementById('user-modal-pwd-label').textContent = 'New Password (leave blank to keep)';
     document.getElementById('user-modal-pwd').required = false;
-    document.getElementById('user-modal-active').checked = user.is_active;
-    document.getElementById('user-modal-status-row').classList.remove('hidden');
+
+    const activeBox = document.getElementById('user-modal-active');
+    activeBox.checked = user.is_active;
+    activeBox.disabled = isSelf; // Cannot deactivate self
+
+    const statusRow = document.getElementById('user-modal-status-row');
+    if (isSelf) {
+        statusRow.classList.add('hidden');
+    } else {
+        statusRow.classList.remove('hidden');
+    }
+
     document.getElementById('user-modal').classList.remove('hidden');
 }
 
@@ -2177,6 +2212,10 @@ async function handleUserFormSubmit(e) {
 }
 
 async function toggleUserActive(userId, newStatus) {
+    if (appState.user && userId === appState.user.id && !newStatus) {
+        showToast('Administrators cannot deactivate their own active account.', 'warning');
+        return;
+    }
     try {
         await apiCall(`/admin/users/${userId}`, {
             method: 'PUT',

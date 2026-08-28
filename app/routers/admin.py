@@ -144,6 +144,19 @@ def update_organization_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
+    # Security Rule: Administrators cannot deactivate their own account or remove their own admin privileges
+    if user.id == admin_user.id:
+        if user_up.is_active is False:
+            raise HTTPException(
+                status_code=400,
+                detail="Security Guard: Administrators cannot deactivate their own active account."
+            )
+        if user_up.role is not None and user_up.role != "admin":
+            raise HTTPException(
+                status_code=400,
+                detail="Security Guard: Administrators cannot remove their own admin privileges."
+            )
+
     if user_up.email is not None:
         user.email = user_up.email.lower().strip()
     if user_up.password is not None and user_up.password.strip():
