@@ -28,6 +28,7 @@ inter_office_memo_system.egg-info/SOURCES.txt
 inter_office_memo_system.egg-info/dependency_links.txt
 inter_office_memo_system.egg-info/requires.txt
 inter_office_memo_system.egg-info/top_level.txt
+tests/test_advanced.py
 tests/test_auth.py
 tests/test_memos.py
 tests/test_workflow.py

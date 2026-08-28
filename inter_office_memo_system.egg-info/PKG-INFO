@@ -19,6 +19,8 @@ Requires-Dist: jinja2>=3.1.4
 Requires-Dist: aiofiles>=23.2.1
 Requires-Dist: pytest>=8.2.0
 Requires-Dist: httpx>=0.27.0
+Requires-Dist: psycopg2-binary>=2.9.12
+Requires-Dist: pg8000>=1.31.5
 
 # Enterprise Inter-Office Memo Management System
 
@@ -84,6 +86,7 @@ All accounts use the password: `password123`
 
 ## 📚 Documentation Index
 
-- 📖 [Comprehensive Project Documentation](file:///c:/Users/User/Desktop/memo/docs/PROJECT_DOCUMENTATION.md)
-- ⚙️ [Installation and Setup Guide](file:///c:/Users/User/Desktop/memo/docs/INSTALLATION.md)
-- 🤖 [AI Prompt & Response Development History](file:///c:/Users/User/Desktop/memo/docs/AI_VIBE_CODING_LOG.md)
+- 📖 [Comprehensive Project Documentation](docs/PROJECT_DOCUMENTATION.md)
+- ⚙️ [Installation and Setup Guide](docs/INSTALLATION.md)
+- 🤖 [AI Prompt & Response Development History](docs/AI_VIBE_CODING_LOG.md)
+

@@ -28,7 +28,7 @@ class Settings(BaseSettings):
         "png", "jpg", "jpeg", "gif", "txt", "zip", "csv"
     }
 
-    model_config = SettingsConfigDict(case_sensitive=True)
+    model_config = SettingsConfigDict(case_sensitive=True, env_file=".env", extra="ignore")
 
 settings = Settings()
 
