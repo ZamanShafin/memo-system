@@ -115,6 +115,90 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 12000);
 });
 
+function clearUserDataAndDOM() {
+    // 1. Purge all cached user-specific data from appState
+    appState.inboxMemos = [];
+    appState.sentMemos = [];
+    appState.draftMemos = [];
+    appState.completedMemos = [];
+    appState.searchResults = [];
+    appState.notifications = [];
+    appState.unreadCount = 0;
+    appState.auditLogs = [];
+    appState.reportsData = null;
+    appState.selectedMemoId = null;
+    appState.selectedVersion = null;
+
+    // 2. Clear all list containers and UI elements across all views immediately
+    const containerIds = [
+        'dash-inbox-list',
+        'dash-sent-list',
+        'inbox-memos-list',
+        'sent-memos-list',
+        'draft-memos-list',
+        'completed-memos-list',
+        'search-results-container',
+        'admin-users-table-container',
+        'admin-depts-table-container',
+        'admin-cats-table-container',
+        'admin-tmpls-table-container',
+        'audit-logs-list',
+        'notifications-list',
+        'delegations-list-container'
+    ];
+
+    containerIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+    });
+
+    // 3. Clear metric labels & KPI counters
+    const countIds = [
+        'stat-inbox-count',
+        'stat-sent-count',
+        'stat-completed-count',
+        'stat-urgent-count',
+        'search-count-label',
+        'notif-badge',
+        'rep-total-memos',
+        'rep-pending-approvals',
+        'rep-avg-hours',
+        'rep-changes-req',
+        'rep-rejections'
+    ];
+    countIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (id === 'notif-badge') el.classList.add('hidden');
+            else el.textContent = '—';
+        }
+    });
+
+    // 4. Destroy existing Chart instances
+    Object.keys(appState.charts).forEach(key => {
+        try {
+            if (appState.charts[key]) appState.charts[key].destroy();
+        } catch (e) {}
+    });
+    appState.charts = {};
+
+    // 5. Hide any open modals & dropdowns
+    const modals = [
+        'workflow-action-modal',
+        'manage-steps-modal',
+        'new-delegation-modal',
+        'dept-modal',
+        'user-modal',
+        'cat-modal',
+        'notifications-dropdown',
+        'demo-switcher-dropdown'
+    ];
+    modals.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    });
+}
+
 function showAppLoader(title = 'Syncing Enterprise Workspace', subtitle = 'Pre-loading departments, inboxes, and sequential workflows...') {
     const loader = document.getElementById('app-loader-screen');
     if (!loader) return;
@@ -122,10 +206,8 @@ function showAppLoader(title = 'Syncing Enterprise Workspace', subtitle = 'Pre-l
     const subtitleEl = document.getElementById('app-loader-subtitle');
     if (titleEl) titleEl.textContent = title;
     if (subtitleEl) subtitleEl.textContent = subtitle;
-    loader.classList.remove('hidden');
-    setTimeout(() => {
-        loader.classList.remove('opacity-0');
-    }, 10);
+    loader.classList.remove('hidden', 'opacity-0');
+    loader.style.display = 'flex';
     if (window.lucide) lucide.createIcons();
 }
 
@@ -135,24 +217,27 @@ function hideAppLoader() {
     loader.classList.add('opacity-0');
     setTimeout(() => {
         loader.classList.add('hidden');
-    }, 300);
+        loader.style.display = 'none';
+    }, 250);
 }
 
 async function setupApp(showLoading = true) {
     if (showLoading) {
         showAppLoader(`Connecting to ${appState.organization?.name || 'Workspace'}`, 'Pre-loading departments, inboxes, and sequential workflows...');
     }
+    
+    // Immediately switch to dashboard before exposing view to eliminate previous view residue
+    showView('dashboard');
     updateHeaderUI();
     
-    // Fetch all initial data bundle
+    // Fetch fresh user-scoped data bundle
     await loadInitialData();
 
-    // Reveal populated dashboard
-    showView('dashboard');
+    // Fast render current dashboard
     updateDashboardDOM();
 
     if (showLoading) {
-        setTimeout(hideAppLoader, 250);
+        setTimeout(hideAppLoader, 200);
     }
     if (window.lucide) lucide.createIcons();
 }
@@ -199,12 +284,17 @@ function renderDemoSwitcher(demoData) {
 }
 
 async function quickLogin(userId) {
-    showAppLoader('Switching Demo Persona...', 'Authenticating and preparing role workspace...');
+    // 1. Cover screen immediately with synchronous solid loader
+    showAppLoader('Switching Demo Persona...', 'Purging workspace and authenticating role...');
+    
+    // 2. Wipe all User A's data from client memory and DOM immediately
+    clearUserDataAndDOM();
+
     try {
         const res = await apiCall(`/demo/quick-login/${userId}`, { method: 'POST' });
         setSession(res.access_token, res.user, res.organization);
-        showToast(`Logged in as ${res.user.full_name} (${res.organization.name})`, 'success');
-        setupApp(true);
+        showToast(`Switched persona to ${res.user.full_name} (${res.organization.name})`, 'success');
+        await setupApp(true);
     } catch (e) {
         hideAppLoader();
         showToast(e.message, 'error');
@@ -222,6 +312,7 @@ function setSession(token, user, organization) {
 
 function logout() {
     apiCall('/auth/logout', { method: 'POST' }).catch(() => {});
+    clearUserDataAndDOM();
     appState.token = '';
     appState.user = null;
     appState.organization = null;
