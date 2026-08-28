@@ -1,6 +1,6 @@
 import datetime
 from sqlalchemy import (
-    Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Index, UniqueConstraint
+    Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Index, UniqueConstraint, LargeBinary
 )
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -187,6 +187,7 @@ class MemoAttachment(Base):
     file_size = Column(Integer, nullable=False)  # in bytes
     file_type = Column(String(100), nullable=True)  # MIME type / extension
     storage_path = Column(String(500), nullable=False)
+    file_data = Column(LargeBinary, nullable=True)  # Persistent serverless storage
     created_at = Column(DateTime(timezone=True), default=utcnow)
 
     memo = relationship("Memo", back_populates="attachments")

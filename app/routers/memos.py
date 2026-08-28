@@ -596,8 +596,11 @@ async def upload_attachment(
     if len(content) > settings.MAX_UPLOAD_SIZE_BYTES:
         raise HTTPException(status_code=400, detail="File exceeds maximum allowed size of 25MB")
         
-    with open(file_path, "wb") as f:
-        f.write(content)
+    try:
+        with open(file_path, "wb") as f:
+            f.write(content)
+    except Exception:
+        pass  # Serverless ephemeral filesystem fallback
         
     attachment = models.MemoAttachment(
         memo_id=memo.id,
@@ -607,7 +610,8 @@ async def upload_attachment(
         original_name=file.filename,
         file_size=len(content),
         file_type=file.content_type or ext,
-        storage_path=file_path
+        storage_path=file_path,
+        file_data=content
     )
     db.add(attachment)
     db.commit()
@@ -646,14 +650,29 @@ def download_attachment(
         models.MemoAttachment.org_id == current_user.org_id
     ).first()
     
-    if not att or not os.path.exists(att.storage_path):
-        raise HTTPException(status_code=404, detail="Attachment file not found")
+    if not att:
+        raise HTTPException(status_code=404, detail="Attachment record not found")
         
-    return FileResponse(
-        path=att.storage_path,
-        filename=att.original_name,
-        media_type=att.file_type or "application/octet-stream"
-    )
+    # 1. First serve from persistent database BLOB (works 100% on Vercel & serverless)
+    if att.file_data:
+        import urllib.parse
+        encoded_name = urllib.parse.quote(att.original_name)
+        return Response(
+            content=att.file_data,
+            media_type=att.file_type or "application/octet-stream",
+            headers={
+                "Content-Disposition": f'attachment; filename="{att.original_name}"; filename*=UTF-8\'\'{encoded_name}'
+            }
+        )
+    # 2. Fallback to local disk file if present
+    elif att.storage_path and os.path.exists(att.storage_path):
+        return FileResponse(
+            path=att.storage_path,
+            filename=att.original_name,
+            media_type=att.file_type or "application/octet-stream"
+        )
+    else:
+        raise HTTPException(status_code=404, detail="Attachment file content not found")
 
 
 @router.delete("/{memo_id}/attachments/{attachment_id}")
