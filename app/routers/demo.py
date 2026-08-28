@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db, Base, engine
 from app import models, schemas, security
@@ -11,28 +11,27 @@ router = APIRouter(prefix="/demo", tags=["Demo & Evaluation"])
 @router.get("/accounts")
 def get_demo_accounts(db: Session = Depends(get_db)):
     """
-    Returns pre-configured demonstration accounts across multiple tenants.
+    Returns pre-configured demonstration accounts in a single optimized query.
     """
-    orgs = db.query(models.Organization).order_by(models.Organization.name).all()
-    result = []
+    orgs = db.query(models.Organization).options(
+        joinedload(models.Organization.users).joinedload(models.User.department)
+    ).order_by(models.Organization.name).all()
     
+    result = []
     for org in orgs:
-        users = db.query(models.User).filter(
-            models.User.org_id == org.id,
-            models.User.is_active == True
-        ).order_by(models.User.role.desc(), models.User.full_name).all()
-        
         u_list = []
-        for u in users:
-            dept_name = u.department.name if u.department else "General"
+        active_users = [u for u in org.users if u.is_active]
+        active_users.sort(key=lambda x: (x.role != 'admin', x.full_name))
+        
+        for u in active_users:
             u_list.append({
                 "id": u.id,
                 "email": u.email,
                 "full_name": u.full_name,
                 "designation": u.designation,
                 "role": u.role,
-                "department": dept_name,
-                "password": "password123"  # Standard demo password
+                "department": u.department.name if u.department else "General",
+                "password": "password123"
             })
             
         result.append({

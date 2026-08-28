@@ -4,7 +4,7 @@ import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query, Request, Response
 from fastapi.responses import FileResponse, StreamingResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import or_, and_, desc
 
 from app.database import get_db
@@ -13,6 +13,18 @@ from app import models, schemas, security
 from app.services import workflow_service, version_service, audit_service, notification_service, pdf_service
 
 router = APIRouter(prefix="/memos", tags=["Memos"])
+
+MEMO_EAGER_LOAD = [
+    joinedload(models.Memo.author),
+    joinedload(models.Memo.department),
+    joinedload(models.Memo.category),
+    selectinload(models.Memo.workflow_steps).joinedload(models.MemoWorkflowStep.assigned_user),
+    selectinload(models.Memo.workflow_steps).joinedload(models.MemoWorkflowStep.action_by_user),
+    selectinload(models.Memo.workflow_steps).joinedload(models.MemoWorkflowStep.on_behalf_of_user),
+    selectinload(models.Memo.attachments),
+    selectinload(models.Memo.versions),
+    selectinload(models.Memo.comments).joinedload(models.MemoComment.author)
+]
 
 def generate_memo_number(db: Session, org: models.Organization) -> str:
     """
@@ -93,8 +105,8 @@ def get_dashboard_bootstrap(
     ).all()
     delegator_ids = [d.delegator_id for d in delegations]
 
-    # 3. Inbox Memos (Action Required)
-    inbox_memos = db.query(models.Memo).filter(
+    # 3. Inbox Memos (Action Required) with eager loading
+    inbox_memos = db.query(models.Memo).options(*MEMO_EAGER_LOAD).filter(
         models.Memo.org_id == org_id,
         models.Memo.status.in_(["Pending Review", "Pending Approval"]),
         or_(
@@ -104,25 +116,34 @@ def get_dashboard_bootstrap(
         )
     ).order_by(desc(models.Memo.updated_at)).all()
 
-    # 4. Sent Memos (Recent 5)
-    sent_memos = db.query(models.Memo).filter(
+    # 4. Sent Memos (Recent 5) with eager loading
+    sent_memos = db.query(models.Memo).options(*MEMO_EAGER_LOAD).filter(
         models.Memo.org_id == org_id,
         models.Memo.author_id == current_user.id,
         models.Memo.status != "Draft"
     ).order_by(desc(models.Memo.created_at)).limit(5).all()
 
-    # 5. Completed Memos (Recent 5)
-    completed_memos = db.query(models.Memo).filter(
+    # 5. Completed Memos (Recent 5) with eager loading
+    completed_memos = db.query(models.Memo).options(*MEMO_EAGER_LOAD).filter(
         models.Memo.org_id == org_id,
         models.Memo.status.in_(["Approved", "Rejected"])
     ).order_by(desc(models.Memo.updated_at)).limit(5).all()
 
-    # 6. Statistics
-    total_count = db.query(models.Memo).filter(models.Memo.org_id == org_id).count()
-    pending_count = db.query(models.Memo).filter(models.Memo.org_id == org_id, models.Memo.status.in_(["Pending Review", "Pending Approval"])).count()
-    approved_count = db.query(models.Memo).filter(models.Memo.org_id == org_id, models.Memo.status == "Approved").count()
-    rejected_count = db.query(models.Memo).filter(models.Memo.org_id == org_id, models.Memo.status == "Rejected").count()
-    urgent_count = db.query(models.Memo).filter(models.Memo.org_id == org_id, models.Memo.priority == "Urgent").count()
+    # 6. Combined Statistics in 1 single query
+    from sqlalchemy import func, case
+    stat_row = db.query(
+        func.count(models.Memo.id).label("total"),
+        func.count(case((models.Memo.status.in_(["Pending Review", "Pending Approval"]), 1))).label("pending"),
+        func.count(case((models.Memo.status == "Approved", 1))).label("approved"),
+        func.count(case((models.Memo.status == "Rejected", 1))).label("rejected"),
+        func.count(case((models.Memo.priority == "Urgent", 1))).label("urgent")
+    ).filter(models.Memo.org_id == org_id).first()
+
+    total_count = stat_row[0] or 0
+    pending_count = stat_row[1] or 0
+    approved_count = stat_row[2] or 0
+    rejected_count = stat_row[3] or 0
+    urgent_count = stat_row[4] or 0
 
     # 7. Unread Notifications Count
     unread_notifs = db.query(models.Notification).filter(
@@ -256,7 +277,7 @@ def get_inbox_memos(
     
     target_user_ids = [current_user.id] + delegator_ids
     
-    query = db.query(models.Memo).filter(
+    query = db.query(models.Memo).options(*MEMO_EAGER_LOAD).filter(
         models.Memo.org_id == current_user.org_id,
         models.Memo.status.in_(["Pending Approval", "Pending Review", "Changes Requested"]),
         models.Memo.current_assignee_id.in_(target_user_ids)
@@ -281,7 +302,7 @@ def get_sent_memos(
     """
     Returns memos created or submitted by the current user.
     """
-    memos = db.query(models.Memo).filter(
+    memos = db.query(models.Memo).options(*MEMO_EAGER_LOAD).filter(
         models.Memo.org_id == current_user.org_id,
         models.Memo.author_id == current_user.id,
         models.Memo.status != "Draft"
@@ -297,7 +318,7 @@ def get_draft_memos(
     """
     Returns draft memos created by the current user.
     """
-    memos = db.query(models.Memo).filter(
+    memos = db.query(models.Memo).options(*MEMO_EAGER_LOAD).filter(
         models.Memo.org_id == current_user.org_id,
         models.Memo.author_id == current_user.id,
         models.Memo.status == "Draft"
@@ -313,7 +334,7 @@ def get_completed_memos(
     """
     Returns completed/approved/rejected memos accessible to the user.
     """
-    query = db.query(models.Memo).filter(
+    query = db.query(models.Memo).options(*MEMO_EAGER_LOAD).filter(
         models.Memo.org_id == current_user.org_id,
         models.Memo.status.in_(["Approved", "Rejected"])
     )
@@ -340,7 +361,7 @@ def get_all_memos_search(
     """
     Comprehensive search and filter across memos respecting tenant and permission boundaries.
     """
-    query = db.query(models.Memo).filter(models.Memo.org_id == current_user.org_id)
+    query = db.query(models.Memo).options(*MEMO_EAGER_LOAD).filter(models.Memo.org_id == current_user.org_id)
     
     if q and q.strip():
         search_term = f"%{q.strip()}%"
@@ -386,7 +407,7 @@ def get_memo_detail(
     current_user: models.User = Depends(security.get_current_user),
     db: Session = Depends(get_db)
 ):
-    memo = db.query(models.Memo).filter(models.Memo.id == memo_id, models.Memo.org_id == current_user.org_id).first()
+    memo = db.query(models.Memo).options(*MEMO_EAGER_LOAD).filter(models.Memo.id == memo_id, models.Memo.org_id == current_user.org_id).first()
     if not memo:
         raise HTTPException(status_code=404, detail="Memo not found")
         

@@ -122,9 +122,17 @@ async function setupApp() {
 }
 
 async function loadDemoAccounts() {
+    const cached = sessionStorage.getItem('memo_demo_accounts');
+    if (cached) {
+        try {
+            appState.demoAccounts = JSON.parse(cached);
+            renderDemoSwitcher(appState.demoAccounts);
+        } catch (e) {}
+    }
     try {
         const data = await apiCall('/demo/accounts');
         appState.demoAccounts = data;
+        sessionStorage.setItem('memo_demo_accounts', JSON.stringify(data));
         renderDemoSwitcher(data);
     } catch (e) {
         console.warn('Could not load demo accounts:', e);
