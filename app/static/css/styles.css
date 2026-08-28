@@ -146,6 +146,26 @@ code, pre, .font-mono {
     }
 }
 
+/* Global Mobile Overflow Containment */
+html, body {
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    box-sizing: border-box;
+}
+
+#main-app-container {
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+}
+
+main {
+    width: 100% !important;
+    max-width: 100vw !important;
+    box-sizing: border-box;
+}
+
 /* Responsive Touch Target Sizing */
 .touch-target {
     min-height: 42px;
@@ -160,6 +180,7 @@ code, pre, .font-mono {
     -webkit-overflow-scrolling: touch;
     border-radius: 1rem;
     border: 1px solid #e2e8f0;
+    max-width: 100%;
 }
 
 /* Stepper horizontal flow on mobile */
@@ -169,6 +190,7 @@ code, pre, .font-mono {
     -webkit-overflow-scrolling: touch;
     padding-bottom: 0.75rem;
     gap: 0.5rem;
+    max-width: 100%;
 }
 .stepper-horizontal::-webkit-scrollbar {
     height: 4px;
@@ -191,4 +213,10 @@ code, pre, .font-mono {
     max-height: 90vh;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+}
+
+/* Text Wrapping Guard */
+.break-words-anywhere {
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }

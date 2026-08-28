@@ -2580,29 +2580,29 @@ function createMemoCardHTML(memo, type) {
     const deptName = memo.department?.name || 'General';
 
     return `
-        <div onclick="showView('memo-detail', ${memo.id})" class="p-4 bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-md rounded-xl cursor-pointer transition flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-3">
-            <div class="flex-1">
-                <div class="flex items-center gap-2 mb-1">
-                    <span class="font-mono text-xs font-bold text-indigo-700">${memo.memo_number}</span>
-                    <span class="px-2 py-0.5 text-[10px] font-bold rounded-full ${getStatusBadgeClass(memo.status)}">${memo.status}</span>
-                    <span class="px-2 py-0.5 text-[10px] font-semibold rounded ${getPriorityBadgeClass(memo.priority)}">${memo.priority}</span>
+        <div onclick="showView('memo-detail', ${memo.id})" class="p-3.5 sm:p-4 bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-md rounded-2xl cursor-pointer transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3 w-full">
+            <div class="flex-1 min-w-0 w-full">
+                <div class="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
+                    <span class="font-mono text-[11px] sm:text-xs font-bold text-indigo-700">${memo.memo_number}</span>
+                    <span class="px-2 py-0.5 text-[9px] sm:text-[10px] font-bold rounded-full ${getStatusBadgeClass(memo.status)}">${memo.status}</span>
+                    <span class="px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold rounded ${getPriorityBadgeClass(memo.priority)}">${memo.priority}</span>
                 </div>
-                <h4 class="font-bold text-slate-800 text-sm hover:text-indigo-600">${memo.title}</h4>
-                <div class="text-xs text-slate-500 mt-1 flex items-center gap-3">
-                    <span>From: <b>${authorName}</b></span>
-                    <span>Dept: <b>${deptName}</b></span>
-                    <span>Submitted: <b>${new Date(memo.created_at).toLocaleDateString()}</b></span>
+                <h4 class="font-bold text-slate-800 text-xs sm:text-sm hover:text-indigo-600 leading-snug break-words">${memo.title}</h4>
+                <div class="text-[11px] sm:text-xs text-slate-500 mt-1.5 flex items-center gap-x-3 gap-y-1 flex-wrap">
+                    <span>From: <b class="text-slate-700">${authorName}</b></span>
+                    <span>Dept: <b class="text-slate-700">${deptName}</b></span>
+                    <span>Submitted: <b class="text-slate-700">${new Date(memo.created_at).toLocaleDateString()}</b></span>
                 </div>
             </div>
-            <div class="flex items-center gap-3 flex-shrink-0">
+            <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                 ${memo.current_assignee ? `
-                    <div class="text-right text-xs">
-                        <div class="text-[10px] text-slate-400 uppercase font-semibold">Current Turn</div>
-                        <div class="font-bold text-amber-700">${memo.current_assignee.full_name}</div>
+                    <div class="text-left sm:text-right text-xs">
+                        <div class="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold tracking-wider">Current Turn</div>
+                        <div class="font-bold text-amber-700 text-xs">${memo.current_assignee.full_name}</div>
                     </div>
-                ` : ''}
-                <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition">
-                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                ` : '<div class="sm:hidden"></div>'}
+                <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition shrink-0">
+                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                 </div>
             </div>
         </div>
