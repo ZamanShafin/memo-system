@@ -5,7 +5,7 @@ from app.database import SessionLocal, engine, Base
 from app import models, security
 from app.services import audit_service, version_service, notification_service
 
-def seed_database():
+def seed_database(seed_demo_memos: bool = False):
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     
@@ -14,7 +14,7 @@ def seed_database():
         db.close()
         return
 
-    print("Seeding generic multi-tenant enterprise demonstration data...")
+    print("Seeding clean multi-tenant enterprise users, departments, and templates...")
 
     # ==========================================
     # TENANT 1: Acme Corporation (Generic Enterprise)
@@ -175,7 +175,12 @@ def seed_database():
     db.add(del_head)
     db.commit()
 
-    # Seed Memos in Acme Corp
+    if not seed_demo_memos:
+        db.close()
+        print("Clean enterprise users and departments created successfully.")
+        return
+
+    # Seed Demo Memos in Acme Corp (Only when explicitly enabled)
     # 1. MEMO-ACME-2026-0001: In-Progress Procurement Memo (Pending Finance Manager Approval)
     cat_proc = categories[2]
     memo_1 = models.Memo(
