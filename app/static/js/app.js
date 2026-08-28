@@ -18,14 +18,6 @@ const DEFAULT_DEMO_ACCOUNTS = [
             { id: 6, full_name: "Alex Morgan", email: "alex.morgan@acmecorp.com", designation: "Senior Software Engineer / Team Lead", role: "user", department: "Engineering & IT" },
             { id: 7, full_name: "Jessica Taylor", email: "jessica.taylor@acmecorp.com", designation: "Lead Product Designer", role: "user", department: "Product Strategy" }
         ]
-    },
-    {
-        org_name: "Nexus Global Group",
-        org_code: "NEXUS",
-        users: [
-            { id: 8, full_name: "Jonathan Hayes", email: "admin@nexusgroup.com", designation: "Managing Director", role: "admin", department: "Corporate Strategy" },
-            { id: 9, full_name: "Victoria Price", email: "lead.analyst@nexusgroup.com", designation: "Principal Financial Analyst", role: "user", department: "Financial Advisory" }
-        ]
     }
 ];
 

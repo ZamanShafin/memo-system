@@ -327,89 +327,11 @@ def seed_database(seed_demo_memos: bool = False, db_session = None):
     m5_s0 = models.MemoWorkflowStep(memo_id=memo_5.id, step_index=0, step_type="author", role_name="Author", assigned_user_id=u_employee1.id, status="pending", is_current=True)
     db.add(m5_s0)
 
-    # ==========================================
-    # TENANT 2: Nexus Financial Group (Multi-Tenancy Isolation Proof)
-    # ==========================================
-    org_nexus = models.Organization(
-        name="Nexus Financial Group",
-        code="nexus",
-        logo_url="https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=128&h=128&fit=crop",
-        contact_email="compliance@nexusgroup.com",
-        contact_phone="+1 (212) 555-0188",
-        address="Wall Street Financial Plaza, New York, NY 10005, USA",
-        settings_json=json.dumps({"currency": "USD", "allow_delegation": True})
-    )
-    db.add(org_nexus)
-    db.commit()
-    db.refresh(org_nexus)
-
-    nexus_dept_risk = models.Department(org_id=org_nexus.id, name="Quantitative Risk & Analytics", description="Risk Management and Capital Modeling")
-    nexus_dept_ops = models.Department(org_id=org_nexus.id, name="Capital Markets Operations", description="Settlements and Trade Operations")
-    db.add_all([nexus_dept_risk, nexus_dept_ops])
-    db.commit()
-    db.refresh(nexus_dept_risk)
-    db.refresh(nexus_dept_ops)
-
-    nexus_cat_sec = models.MemoCategory(org_id=org_nexus.id, name="Regulatory Compliance", description="SEC and FINRA regulatory audits")
-    db.add(nexus_cat_sec)
-    db.commit()
-    db.refresh(nexus_cat_sec)
-
-    u_nexus_admin = models.User(
-        org_id=org_nexus.id,
-        department_id=nexus_dept_risk.id,
-        email="admin@nexusgroup.com",
-        password_hash=hashed_pwd,
-        full_name="Jonathan Hayes",
-        designation="Managing Director & Chief Risk Officer",
-        role="admin",
-        is_active=True
-    )
-    u_nexus_lead = models.User(
-        org_id=org_nexus.id,
-        department_id=nexus_dept_risk.id,
-        email="lead.analyst@nexusgroup.com",
-        password_hash=hashed_pwd,
-        full_name="Victoria Price",
-        designation="Principal Quantitative Strategist",
-        role="user",
-        is_active=True
-    )
-    db.add_all([u_nexus_admin, u_nexus_lead])
-    db.commit()
-    db.refresh(u_nexus_admin)
-    db.refresh(u_nexus_lead)
-
-    memo_nexus1 = models.Memo(
-        org_id=org_nexus.id,
-        author_id=u_nexus_lead.id,
-        department_id=nexus_dept_risk.id,
-        category_id=nexus_cat_sec.id,
-        memo_number="MEMO-NEXUS-2026-0001",
-        title="Confidential: Q3 Capital Adequacy & Risk Exposure Assessment",
-        body="<p>Confidential capital adequacy modeling for Nexus Financial Group executive committee only.</p>",
-        priority="High",
-        status="Approved",
-        current_step_index=1,
-        final_approver_id=u_nexus_admin.id,
-        final_approved_at=now,
-        submitted_at=now - datetime.timedelta(days=1),
-        created_at=now - datetime.timedelta(days=1)
-    )
-    db.add(memo_nexus1)
-    db.commit()
-    db.refresh(memo_nexus1)
-
-    nexus_s0 = models.MemoWorkflowStep(memo_id=memo_nexus1.id, step_index=0, step_type="author", role_name="Author", assigned_user_id=u_nexus_lead.id, status="completed", action_taken="submitted", action_by_user_id=u_nexus_lead.id, is_current=False)
-    nexus_s1 = models.MemoWorkflowStep(memo_id=memo_nexus1.id, step_index=1, step_type="final_approval", role_name="Chief Risk Officer", assigned_user_id=u_nexus_admin.id, status="completed", action_taken="approved", action_by_user_id=u_nexus_admin.id, is_current=False)
-    db.add_all([nexus_s0, nexus_s1])
-
     audit_service.log_event(db, org_acme.id, u_admin.id, "SYSTEM_INIT", "System", "1", "Acme Corporation enterprise tenant initialized with standard departments and approval workflows")
-    audit_service.log_event(db, org_nexus.id, u_nexus_admin.id, "SYSTEM_INIT", "System", "2", "Nexus Financial Group tenant initialized under strict multi-tenant isolation")
 
     db.commit()
     db.close()
-    print("Generic enterprise multi-tenant database successfully seeded!")
+    print("Generic enterprise database successfully seeded with Acme Corporation!")
 
 if __name__ == "__main__":
     seed_database()
