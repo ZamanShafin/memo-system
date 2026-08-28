@@ -122,6 +122,18 @@ function showToast(message, type = 'info') {
     }, 3500);
 }
 
+function createLoadingSpinnerHTML(message = 'Loading resources...') {
+    return `
+        <div class="p-8 sm:p-12 flex flex-col items-center justify-center gap-3 text-slate-400">
+            <svg class="animate-spin h-7 w-7 text-indigo-600" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-xs font-bold text-slate-500 tracking-wide animate-pulse">${message}</span>
+        </div>
+    `;
+}
+
 // Initialize Application
 document.addEventListener('DOMContentLoaded', async () => {
     loadDemoAccounts();
@@ -640,18 +652,18 @@ async function renderInboxView() {
     if (appState.inboxMemos && appState.inboxMemos.length > 0 && !priorityFilter) {
         list.innerHTML = appState.inboxMemos.map(m => createMemoCardHTML(m, 'action')).join('');
         if (window.lucide) lucide.createIcons();
-    } else if (!list.innerHTML) {
-        list.innerHTML = `<div class="p-8 text-center text-slate-400 animate-pulse"><div class="h-4 bg-slate-200 rounded w-1/2 mx-auto mb-2"></div><div class="h-3 bg-slate-200 rounded w-1/3 mx-auto"></div></div>`;
+    } else if (list && (!list.innerHTML || list.innerHTML.trim() === '')) {
+        list.innerHTML = createLoadingSpinnerHTML('Fetching pending action memos...');
     }
 
     try {
         const memos = await apiCall(`/memos/inbox?priority=${priorityFilter}&sort_by=${sortBy}`);
         appState.inboxMemos = memos;
         if (memos.length === 0) {
-            list.innerHTML = `<div class="bg-white rounded-xl p-12 text-center text-slate-500 border border-slate-200">
+            list.innerHTML = `<div class="bg-white rounded-2xl p-12 text-center text-slate-500 border border-slate-200 shadow-sm">
                 <i data-lucide="inbox" class="w-12 h-12 mx-auto text-slate-300 mb-3"></i>
-                <h3 class="text-base font-semibold text-slate-700">Inbox is empty</h3>
-                <p class="text-sm mt-1">There are no memos awaiting your action at this time.</p>
+                <h3 class="text-base font-bold text-slate-700">Inbox is empty</h3>
+                <p class="text-xs text-slate-400 mt-1">There are no memos awaiting your action at this time.</p>
             </div>`;
         } else {
             list.innerHTML = memos.map(m => createMemoCardHTML(m, 'action')).join('');
@@ -674,18 +686,18 @@ async function renderSentView() {
     if (appState.sentMemos && appState.sentMemos.length > 0) {
         list.innerHTML = appState.sentMemos.map(m => createMemoCardHTML(m, 'sent')).join('');
         if (window.lucide) lucide.createIcons();
-    } else if (!list.innerHTML) {
-        list.innerHTML = `<div class="p-8 text-center text-slate-400 animate-pulse"><div class="h-4 bg-slate-200 rounded w-1/2 mx-auto mb-2"></div><div class="h-3 bg-slate-200 rounded w-1/3 mx-auto"></div></div>`;
+    } else if (list && (!list.innerHTML || list.innerHTML.trim() === '')) {
+        list.innerHTML = createLoadingSpinnerHTML('Fetching your submitted memos...');
     }
 
     try {
         const memos = await apiCall('/memos/sent');
         appState.sentMemos = memos;
         if (memos.length === 0) {
-            list.innerHTML = `<div class="bg-white rounded-xl p-12 text-center text-slate-500 border border-slate-200">
+            list.innerHTML = `<div class="bg-white rounded-2xl p-12 text-center text-slate-500 border border-slate-200 shadow-sm">
                 <i data-lucide="send" class="w-12 h-12 mx-auto text-slate-300 mb-3"></i>
-                <h3 class="text-base font-semibold text-slate-700">No sent memos</h3>
-                <p class="text-sm mt-1">Memos you submit into workflows will appear here.</p>
+                <h3 class="text-base font-bold text-slate-700">No sent memos</h3>
+                <p class="text-xs text-slate-400 mt-1">Memos you submit into workflows will appear here.</p>
             </div>`;
         } else {
             list.innerHTML = memos.map(m => createMemoCardHTML(m, 'sent')).join('');
@@ -707,18 +719,18 @@ async function renderDraftsView() {
     if (appState.draftMemos && appState.draftMemos.length > 0) {
         list.innerHTML = appState.draftMemos.map(m => createMemoCardHTML(m, 'draft')).join('');
         if (window.lucide) lucide.createIcons();
-    } else if (!list.innerHTML) {
-        list.innerHTML = `<div class="p-8 text-center text-slate-400 animate-pulse"><div class="h-4 bg-slate-200 rounded w-1/2 mx-auto mb-2"></div><div class="h-3 bg-slate-200 rounded w-1/3 mx-auto"></div></div>`;
+    } else if (list && (!list.innerHTML || list.innerHTML.trim() === '')) {
+        list.innerHTML = createLoadingSpinnerHTML('Loading saved draft memos...');
     }
 
     try {
         const memos = await apiCall('/memos/drafts');
         appState.draftMemos = memos;
         if (memos.length === 0) {
-            list.innerHTML = `<div class="bg-white rounded-xl p-12 text-center text-slate-500 border border-slate-200">
+            list.innerHTML = `<div class="bg-white rounded-2xl p-12 text-center text-slate-500 border border-slate-200 shadow-sm">
                 <i data-lucide="file-edit" class="w-12 h-12 mx-auto text-slate-300 mb-3"></i>
-                <h3 class="text-base font-semibold text-slate-700">No saved drafts</h3>
-                <p class="text-sm mt-1">Memos you save without submitting will be listed here.</p>
+                <h3 class="text-base font-bold text-slate-700">No saved drafts</h3>
+                <p class="text-xs text-slate-400 mt-1">Memos you save without submitting will be listed here.</p>
             </div>`;
         } else {
             list.innerHTML = memos.map(m => createMemoCardHTML(m, 'draft')).join('');
@@ -735,21 +747,28 @@ async function renderDraftsView() {
 async function renderCompletedView() {
     const container = document.getElementById('completed-view');
     container.classList.remove('hidden');
+    const list = document.getElementById('completed-memos-list');
+
+    if (appState.completedMemos && appState.completedMemos.length > 0) {
+        list.innerHTML = appState.completedMemos.map(m => createMemoCardHTML(m, 'completed')).join('');
+        if (window.lucide) lucide.createIcons();
+    } else if (list && (!list.innerHTML || list.innerHTML.trim() === '')) {
+        list.innerHTML = createLoadingSpinnerHTML('Loading completed memo archive...');
+    }
 
     try {
         const memos = await apiCall('/memos/completed');
         appState.completedMemos = memos;
-        const list = document.getElementById('completed-memos-list');
         if (memos.length === 0) {
-            list.innerHTML = `<div class="bg-white rounded-xl p-12 text-center text-slate-500 border border-slate-200">
+            list.innerHTML = `<div class="bg-white rounded-2xl p-12 text-center text-slate-500 border border-slate-200 shadow-sm">
                 <i data-lucide="archive" class="w-12 h-12 mx-auto text-slate-300 mb-3"></i>
-                <h3 class="text-base font-semibold text-slate-700">No completed memos</h3>
-                <p class="text-sm mt-1">Finalized approved or rejected memos will be archived here.</p>
+                <h3 class="text-base font-bold text-slate-700">No completed memos</h3>
+                <p class="text-xs text-slate-400 mt-1">Finalized approved or rejected memos will be archived here.</p>
             </div>`;
         } else {
             list.innerHTML = memos.map(m => createMemoCardHTML(m, 'completed')).join('');
         }
-        lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
     } catch (e) {
         showToast(e.message, 'error');
     }
@@ -1037,6 +1056,11 @@ async function renderMemoDetailView(memoId) {
     const cachedMemo = allKnownMemos.find(m => m.id == memoId);
     if (cachedMemo) {
         populateMemoDOM(cachedMemo);
+    } else {
+        const titleEl = document.getElementById('detail-title');
+        const contentEl = document.getElementById('detail-content');
+        if (titleEl) titleEl.textContent = 'Loading Memorandum...';
+        if (contentEl) contentEl.innerHTML = createLoadingSpinnerHTML('Retrieving memorandum content and approval chain...');
     }
 
     // 2. Background sync
@@ -1657,6 +1681,8 @@ async function executeMemoSearch() {
     const countLabel = document.getElementById('search-count-label');
     if (!list) return;
 
+    list.innerHTML = createLoadingSpinnerHTML('Searching authorized memos...');
+
     let origHtml = '';
     if (btn) {
         origHtml = btn.innerHTML;
@@ -1715,10 +1741,13 @@ async function renderDelegationsView() {
         userSelect.innerHTML = '<option value="">Select Colleague</option>' + eligibleUsers.map(u => `<option value="${u.id}">${u.full_name} (${u.designation || u.role})</option>`).join('');
     }
 
-    try {
+        const list = document.getElementById('delegations-list-container') || document.getElementById('delegations-list');
+        if (list && (!list.innerHTML || list.innerHTML.trim() === '')) {
+            list.innerHTML = createLoadingSpinnerHTML('Loading active workflow delegations...');
+        }
+
         const delegations = await apiCall('/delegations');
         appState.delegations = delegations;
-        const list = document.getElementById('delegations-list-container') || document.getElementById('delegations-list');
         if (!list) return;
 
         if (delegations.length === 0) {
@@ -1825,6 +1854,11 @@ function switchAdminTab(tabName) {
             }
         }
     });
+
+    if (tabName === 'departments') renderAdminDepartments();
+    else if (tabName === 'users') renderAdminUsers();
+    else if (tabName === 'categories') renderAdminCategories();
+    else if (tabName === 'templates') renderAdminTemplates();
 }
 
 async function renderAdminView() {
@@ -1847,9 +1881,12 @@ async function renderAdminView() {
 }
 
 async function renderAdminDepartments() {
+    const container = document.getElementById('admin-depts-table-container');
+    if (container && (!container.innerHTML || container.innerHTML.trim() === '')) {
+        container.innerHTML = createLoadingSpinnerHTML('Loading corporate departments and status...');
+    }
     const depts = await apiCall('/admin/departments');
     appState.departments = depts;
-    const container = document.getElementById('admin-depts-table-container');
     if (!container) return;
 
     if (depts.length === 0) {
@@ -1976,9 +2013,12 @@ async function toggleDeptActive(deptId, newStatus) {
 }
 
 async function renderAdminUsers() {
+    const container = document.getElementById('admin-users-table-container');
+    if (container && (!container.innerHTML || container.innerHTML.trim() === '')) {
+        container.innerHTML = createLoadingSpinnerHTML('Loading organization users and department assignments...');
+    }
     const users = await apiCall('/admin/users');
     appState.orgUsers = users;
-    const container = document.getElementById('admin-users-table-container');
     if (!container) return;
 
     // Populate user modal dept dropdown
@@ -2149,9 +2189,12 @@ async function toggleUserActive(userId, newStatus) {
 }
 
 async function renderAdminCategories() {
+    const container = document.getElementById('admin-cats-table-container');
+    if (container && (!container.innerHTML || container.innerHTML.trim() === '')) {
+        container.innerHTML = createLoadingSpinnerHTML('Loading institutional memo categories...');
+    }
     const cats = await apiCall('/admin/categories');
     appState.categories = cats;
-    const container = document.getElementById('admin-cats-table-container');
     if (!container) return;
 
     if (cats.length === 0) {
@@ -2200,9 +2243,12 @@ async function handleCatFormSubmit(e) {
 }
 
 async function renderAdminTemplates() {
+    const container = document.getElementById('admin-tmpls-table-container');
+    if (container && (!container.innerHTML || container.innerHTML.trim() === '')) {
+        container.innerHTML = createLoadingSpinnerHTML('Loading reusable approval workflow templates...');
+    }
     const tmpls = await apiCall('/admin/templates');
     appState.templates = tmpls;
-    const container = document.getElementById('admin-tmpls-table-container');
     if (!container) return;
 
     if (tmpls.length === 0) {
@@ -2236,6 +2282,13 @@ async function renderReportsView() {
     const container = document.getElementById('reports-view');
     container.classList.remove('hidden');
 
+    if (!appState.reportsData) {
+        ['rep-total-memos', 'rep-pending-approvals', 'rep-avg-hours', 'rep-changes-req', 'rep-rejections'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '...';
+        });
+    }
+
     try {
         const stats = await apiCall('/reports/statistics');
         appState.reportsData = stats;
@@ -2267,10 +2320,15 @@ async function renderAuditView() {
         return;
     }
 
+    const list = document.getElementById('audit-logs-list');
+    if (list && (!list.innerHTML || list.innerHTML.trim() === '')) {
+        list.innerHTML = `<tr><td colspan="5" class="py-8">${createLoadingSpinnerHTML('Fetching compliance audit trail...')}</td></tr>`;
+    }
+
     try {
         const logs = await apiCall('/audit?limit=100');
         appState.auditLogs = logs;
-        const list = document.getElementById('audit-logs-list');
+        if (!list) return;
 
         if (logs.length === 0) {
             list.innerHTML = `<div class="p-8 text-center text-slate-500 text-sm">No audit logs recorded yet.</div>`;
