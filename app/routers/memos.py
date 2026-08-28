@@ -127,12 +127,19 @@ def get_dashboard_bootstrap(
 
     # 6. Combined Statistics in 1 single query
     from sqlalchemy import func, case
+    status_counts = db.query(
+        models.Memo.status,
+        func.count(models.Memo.id)
+    ).filter(models.Memo.org_id == org_id).group_by(models.Memo.status).all()
+    memos_by_status = [{"status": s, "count": c} for s, c in status_counts]
+
     stat_row = db.query(
         func.count(models.Memo.id).label("total"),
         func.count(case((models.Memo.status.in_(["Pending Review", "Pending Approval"]), 1))).label("pending"),
         func.count(case((models.Memo.status == "Approved", 1))).label("approved"),
         func.count(case((models.Memo.status == "Rejected", 1))).label("rejected"),
-        func.count(case((models.Memo.priority == "Urgent", 1))).label("urgent")
+        func.count(case((models.Memo.priority == "Urgent", 1))).label("urgent"),
+        func.count(case((models.Memo.status == "Changes Requested", 1))).label("changes_req")
     ).filter(models.Memo.org_id == org_id).first()
 
     total_count = stat_row[0] or 0
@@ -140,6 +147,7 @@ def get_dashboard_bootstrap(
     approved_count = stat_row[2] or 0
     rejected_count = stat_row[3] or 0
     urgent_count = stat_row[4] or 0
+    changes_req_count = stat_row[5] or 0
 
     # 7. Unread Notifications Count
     unread_notifs = db.query(models.Notification).filter(
@@ -163,6 +171,8 @@ def get_dashboard_bootstrap(
             "approved": approved_count,
             "rejected": rejected_count,
             "urgent_memos": urgent_count,
+            "changes_requested": changes_req_count,
+            "memos_by_status": memos_by_status,
             "avg_cycle_days": 1.2
         },
         "unread_notifications": unread_notifs

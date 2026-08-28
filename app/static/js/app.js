@@ -541,7 +541,7 @@ function showView(viewName, memoId = null) {
 }
 
 function updateDashboardDOM() {
-    const stats = appState.reportsData || { urgent_memos: 0, memos_by_status: {} };
+    const stats = appState.reportsData || { urgent_memos: 0, memos_by_status: [] };
     const inbox = appState.inboxMemos || [];
     const sent = appState.sentMemos || [];
     const completed = appState.completedMemos || [];
@@ -575,6 +575,36 @@ function updateDashboardDOM() {
             sentList.innerHTML = sent.slice(0, 5).map(m => createMemoCardHTML(m, 'sent')).join('');
         }
     }
+
+    // Render Status Distribution Chart on Dashboard
+    let statusList = [];
+    if (stats.memos_by_status && Array.isArray(stats.memos_by_status) && stats.memos_by_status.length > 0) {
+        statusList = stats.memos_by_status;
+    } else {
+        const counts = {};
+        if (stats.approved) counts['Approved'] = stats.approved;
+        if (stats.pending_approval) counts['Pending Approval'] = stats.pending_approval;
+        if (stats.rejected) counts['Rejected'] = stats.rejected;
+        if (stats.changes_requested) counts['Changes Requested'] = stats.changes_requested;
+        
+        // Also include user's personal memos if empty
+        const allUserMemos = [...inbox, ...sent, ...completed];
+        const seen = new Set();
+        allUserMemos.forEach(m => {
+            if (m && m.id && !seen.has(m.id)) {
+                seen.add(m.id);
+                counts[m.status] = (counts[m.status] || 0) + 1;
+            }
+        });
+
+        statusList = Object.keys(counts).map(k => ({ status: k, count: counts[k] }));
+    }
+
+    if (statusList.length === 0) {
+        statusList = [{ status: 'No Memos Yet', count: 1 }];
+    }
+
+    renderStatusPieChart('dash-status-chart', statusList);
 
     if (window.lucide) lucide.createIcons();
 }
@@ -2437,11 +2467,26 @@ function renderStatusPieChart(canvasId, statusData) {
     if (!canvas || !window.Chart) return;
 
     if (appState.charts[canvasId]) {
-        appState.charts[canvasId].destroy();
+        try {
+            appState.charts[canvasId].destroy();
+        } catch (e) {}
     }
 
-    const labels = statusData.map(s => s.status);
-    const counts = statusData.map(s => s.count);
+    const dataArr = (statusData && statusData.length > 0) ? statusData : [{ status: 'No Memos Yet', count: 1 }];
+    const labels = dataArr.map(s => s.status);
+    const counts = dataArr.map(s => s.count);
+
+    const statusColorMap = {
+        'Approved': '#10b981',
+        'Pending Approval': '#f59e0b',
+        'Pending Review': '#3b82f6',
+        'Changes Requested': '#8b5cf6',
+        'Rejected': '#ef4444',
+        'Draft': '#94a3b8',
+        'No Memos Yet': '#cbd5e1'
+    };
+
+    const bgColors = labels.map(l => statusColorMap[l] || '#6366f1');
 
     appState.charts[canvasId] = new Chart(canvas, {
         type: 'doughnut',
@@ -2449,15 +2494,25 @@ function renderStatusPieChart(canvasId, statusData) {
             labels,
             datasets: [{
                 data: counts,
-                backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6', '#ef4444', '#64748b']
+                backgroundColor: bgColors,
+                borderWidth: 2,
+                borderColor: '#ffffff'
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
-            }
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 10,
+                        padding: 8,
+                        font: { size: 11, weight: 'bold' }
+                    }
+                }
+            },
+            cutout: '60%'
         }
     });
 }
