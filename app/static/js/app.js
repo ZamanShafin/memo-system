@@ -1500,44 +1500,57 @@ async function executeMemoSearch() {
 }
 
 // -------------------------------------------------------------
-// 9. WORKFLOW DELEGATION VIEW
+// 9. DELEGATIONS VIEW
 // -------------------------------------------------------------
 async function renderDelegationsView() {
     const container = document.getElementById('delegations-view');
     container.classList.remove('hidden');
 
-    // Populate delegate user select
-    const userSelect = document.getElementById('delegation-user-select');
-    const eligibleUsers = appState.orgUsers.filter(u => u.id !== appState.user.id);
-    userSelect.innerHTML = '<option value="">Select Colleague</option>' + eligibleUsers.map(u => `<option value="${u.id}">${u.full_name} (${u.designation || u.role})</option>`).join('');
+    const userSelect = document.getElementById('del-delegatee-select') || document.getElementById('delegation-user-select');
+    if (userSelect) {
+        if (!appState.orgUsers || appState.orgUsers.length === 0) {
+            try {
+                appState.orgUsers = await apiCall('/admin/users');
+            } catch (e) {
+                // If standard user, fetch org members
+                try {
+                    const depts = await apiCall('/admin/departments');
+                    appState.departments = depts;
+                } catch (err) {}
+            }
+        }
+        const eligibleUsers = (appState.orgUsers || []).filter(u => u.id !== appState.user.id && u.is_active);
+        userSelect.innerHTML = '<option value="">Select Colleague</option>' + eligibleUsers.map(u => `<option value="${u.id}">${u.full_name} (${u.designation || u.role})</option>`).join('');
+    }
 
     try {
         const delegations = await apiCall('/delegations');
         appState.delegations = delegations;
-        const list = document.getElementById('delegations-list');
+        const list = document.getElementById('delegations-list-container') || document.getElementById('delegations-list');
+        if (!list) return;
 
         if (delegations.length === 0) {
-            list.innerHTML = `<div class="p-8 text-center text-slate-500 text-sm">No active or historical delegations found.</div>`;
+            list.innerHTML = `<div class="p-8 bg-white border border-slate-200 rounded-3xl text-center text-slate-500 text-xs">No active or historical delegation rules found. Click "+ New Delegation Rule" to designate a colleague.</div>`;
         } else {
             list.innerHTML = delegations.map(d => {
                 const isDelegator = d.delegator_id === appState.user.id;
-                const statusBadge = d.is_active ? '<span class="px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 rounded">Active</span>' : '<span class="px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded">Inactive</span>';
+                const statusBadge = d.is_active ? '<span class="px-2.5 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 rounded-full">Active</span>' : '<span class="px-2.5 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-full">Inactive</span>';
                 
                 return `
-                    <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl mb-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div class="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm mb-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                         <div>
                             <div class="flex items-center gap-2">
-                                <span class="font-bold text-slate-800 text-sm">${isDelegator ? `Delegated to: ${d.delegatee?.full_name}` : `Delegated from: ${d.delegator?.full_name}`}</span>
+                                <span class="font-bold text-slate-800 text-sm">${isDelegator ? `Delegated to: <b class="text-indigo-600">${d.delegatee?.full_name}</b>` : `Delegated from: <b class="text-indigo-600">${d.delegator?.full_name}</b>`}</span>
                                 ${statusBadge}
                             </div>
                             <div class="text-xs text-slate-500 mt-1">
-                                Period: <b>${new Date(d.start_date).toLocaleDateString()}</b> to <b>${new Date(d.end_date).toLocaleDateString()}</b>
+                                Effective Period: <b>${new Date(d.start_date).toLocaleDateString()}</b> to <b>${new Date(d.end_date).toLocaleDateString()}</b>
                             </div>
-                            ${d.reason ? `<div class="text-xs text-slate-600 mt-1 italic">Reason: "${d.reason}"</div>` : ''}
+                            ${d.reason ? `<div class="text-xs text-slate-600 mt-1 bg-slate-50 px-2 py-1 rounded-md border border-slate-100 inline-block">Reason: "${d.reason}"</div>` : ''}
                         </div>
-                        ${isDelegator && d.is_active ? `
-                            <button onclick="toggleDelegationStatus(${d.id}, false)" class="px-3 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold rounded-lg border border-rose-200">
-                                Revoke Delegation
+                        ${isDelegator ? `
+                            <button onclick="toggleDelegationStatus(${d.id}, ${!d.is_active})" class="px-3.5 py-1.5 text-xs font-bold rounded-xl transition ${d.is_active ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'}">
+                                ${d.is_active ? 'Revoke Delegation' : 'Reactivate'}
                             </button>
                         ` : ''}
                     </div>
@@ -1549,14 +1562,15 @@ async function renderDelegationsView() {
     }
 }
 
-async function createDelegationSubmit() {
-    const delegateeId = document.getElementById('delegation-user-select').value;
-    const startDate = document.getElementById('delegation-start-date').value;
-    const endDate = document.getElementById('delegation-end-date').value;
-    const reason = document.getElementById('delegation-reason').value.trim();
+async function handleCreateDelegationForm(e) {
+    if (e) e.preventDefault();
+    const delegateeId = document.getElementById('del-delegatee-select')?.value || document.getElementById('delegation-user-select')?.value;
+    const startDate = document.getElementById('del-start-date')?.value || document.getElementById('delegation-start-date')?.value;
+    const endDate = document.getElementById('del-end-date')?.value || document.getElementById('delegation-end-date')?.value;
+    const reason = (document.getElementById('del-reason')?.value || document.getElementById('delegation-reason')?.value || '').trim();
 
     if (!delegateeId || !startDate || !endDate) {
-        showToast('Please select colleague and specify date range', 'warning');
+        showToast('Please select a colleague and specify start & end dates', 'warning');
         return;
     }
 
@@ -1570,11 +1584,17 @@ async function createDelegationSubmit() {
                 reason
             })
         });
-        showToast('Delegation created successfully!', 'success');
+        showToast('Delegation rule created successfully!', 'success');
+        const modal = document.getElementById('new-delegation-modal');
+        if (modal) modal.classList.add('hidden');
         renderDelegationsView();
     } catch (e) {
         showToast(e.message, 'error');
     }
+}
+
+async function createDelegationSubmit() {
+    return handleCreateDelegationForm(null);
 }
 
 async function toggleDelegationStatus(delegationId, isActive) {
@@ -1583,7 +1603,7 @@ async function toggleDelegationStatus(delegationId, isActive) {
             method: 'PUT',
             body: JSON.stringify({ is_active: isActive })
         });
-        showToast('Delegation updated', 'info');
+        showToast(`Delegation ${isActive ? 'reactivated' : 'revoked'}`, 'info');
         renderDelegationsView();
     } catch (e) {
         showToast(e.message, 'error');
