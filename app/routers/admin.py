@@ -297,6 +297,55 @@ def update_department(
     return dept
 
 
+@router.delete("/departments/{dept_id}")
+def delete_department(
+    dept_id: int,
+    request: Request,
+    admin_user: models.User = Depends(security.get_current_active_admin),
+    db: Session = Depends(get_db)
+):
+    dept = db.query(models.Department).filter(
+        models.Department.id == dept_id,
+        models.Department.org_id == admin_user.org_id
+    ).first()
+    if not dept:
+        raise HTTPException(status_code=404, detail="Department not found")
+        
+    dept_name = dept.name
+    
+    # 1. Unassign any users belonging to this department
+    users = db.query(models.User).filter(
+        models.User.org_id == admin_user.org_id,
+        models.User.department_id == dept.id
+    ).all()
+    for u in users:
+        u.department_id = None
+        
+    # 2. Unassign any memos tagged with this department
+    memos = db.query(models.Memo).filter(
+        models.Memo.org_id == admin_user.org_id,
+        models.Memo.department_id == dept.id
+    ).all()
+    for m in memos:
+        m.department_id = None
+        
+    # 3. Delete the department
+    db.delete(dept)
+    db.commit()
+    
+    audit_service.log_event(
+        db=db,
+        org_id=admin_user.org_id,
+        user_id=admin_user.id,
+        event_type="DEPARTMENT_DELETE",
+        object_type="Department",
+        object_id=str(dept_id),
+        description=f"Department '{dept_name}' deleted by {admin_user.full_name}. {len(users)} staff member(s) unassigned to General.",
+        ip_address=request.client.host if request.client else None
+    )
+    return {"message": f"Department '{dept_name}' deleted successfully", "id": dept_id}
+
+
 # --- Memo Category Management ---
 @router.get("/categories", response_model=List[schemas.MemoCategoryOut])
 def list_categories(

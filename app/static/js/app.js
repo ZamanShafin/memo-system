@@ -1909,12 +1909,15 @@ async function renderAdminDepartments() {
                                 ${d.is_active ? 'Active' : 'Deactivated'}
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-right space-x-2">
+                        <td class="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
                             <button onclick="showEditDeptModal(${d.id})" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[11px] transition">
                                 Rename / Edit
                             </button>
-                            <button onclick="toggleDeptActive(${d.id}, ${!d.is_active})" class="px-2.5 py-1 font-bold rounded-lg text-[11px] transition ${d.is_active ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'}">
+                            <button onclick="toggleDeptActive(${d.id}, ${!d.is_active})" class="px-2.5 py-1 font-bold rounded-lg text-[11px] transition ${d.is_active ? 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'}">
                                 ${d.is_active ? 'Deactivate' : 'Activate'}
+                            </button>
+                            <button onclick="confirmDeleteDepartment(${d.id}, '${d.name.replace(/'/g, "\\'")}', ${d.user_count})" class="px-2.5 py-1 font-bold rounded-lg text-[11px] transition bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white border border-rose-200">
+                                Delete
                             </button>
                         </td>
                     </tr>
@@ -1999,6 +2002,24 @@ async function toggleDeptActive(deptId, newStatus) {
             body: JSON.stringify({ is_active: newStatus })
         });
         showToast(`Department ${newStatus ? 'activated' : 'deactivated'}`, 'info');
+        renderAdminDepartments();
+    } catch (e) {
+        showToast(e.message, 'error');
+    }
+}
+
+async function confirmDeleteDepartment(deptId, deptName, userCount) {
+    let msg = `Are you sure you want to permanently delete the department "${deptName}"?`;
+    if (userCount > 0) {
+        msg += `\n\nWarning: ${userCount} staff member(s) currently assigned to this department will be unassigned to General.`;
+    }
+    if (!confirm(msg)) return;
+
+    try {
+        await apiCall(`/admin/departments/${deptId}`, {
+            method: 'DELETE'
+        });
+        showToast(`Department "${deptName}" deleted successfully!`, 'success');
         renderAdminDepartments();
     } catch (e) {
         showToast(e.message, 'error');
