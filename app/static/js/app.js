@@ -2258,14 +2258,22 @@ async function renderAuditView() {
 // -------------------------------------------------------------
 // 13. NOTIFICATIONS ENGINE
 // -------------------------------------------------------------
+// NOTIFICATIONS ENGINE
+// -------------------------------------------------------------
 async function fetchUnreadCount() {
     try {
         const res = await apiCall('/notifications/unread-count');
         appState.unreadCount = res.unread_count;
-        const badge = document.getElementById('notification-badge');
+        const badge = document.getElementById('notification-badge') || document.getElementById('notif-badge');
         if (badge) {
             badge.textContent = res.unread_count;
-            badge.style.display = res.unread_count > 0 ? 'inline-flex' : 'none';
+            if (res.unread_count > 0) {
+                badge.classList.remove('hidden');
+                badge.style.display = 'inline-flex';
+            } else {
+                badge.classList.add('hidden');
+                badge.style.display = 'none';
+            }
         }
     } catch (e) {}
 }
@@ -2285,26 +2293,43 @@ async function toggleNotificationsDropdown(e) {
 
     if (isHidden) {
         dropdown.classList.remove('hidden');
+        const list = document.getElementById('notifications-items-list');
+
+        if (list) {
+            list.innerHTML = `
+                <div class="p-6 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                    <svg class="animate-spin h-4 w-4 text-indigo-600 inline" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Loading alerts...</span>
+                </div>
+            `;
+        }
+
         try {
             const notifs = await apiCall('/notifications');
             appState.notifications = notifs;
-            const list = document.getElementById('notifications-items-list');
 
             if (!list) return;
-            if (notifs.length === 0) {
-                list.innerHTML = '<div class="p-6 text-center text-xs text-slate-400">No notifications yet.</div>';
+            if (!notifs || notifs.length === 0) {
+                list.innerHTML = '<div class="p-8 text-center text-xs text-slate-400 font-medium">No notifications yet. You are all caught up! 🎉</div>';
             } else {
                 list.innerHTML = notifs.map(n => `
-                    <div onclick="handleNotificationClick(${n.id}, ${n.memo_id})" class="p-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer ${n.is_read ? 'opacity-70' : 'bg-indigo-50/40 font-semibold'} text-xs">
+                    <div onclick="handleNotificationClick(${n.id}, ${n.memo_id})" class="p-3.5 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition ${n.is_read ? 'opacity-60 bg-white' : 'bg-indigo-50/50 font-semibold'} text-xs">
                         <div class="flex items-center justify-between">
-                            <span class="text-indigo-900">${n.title}</span>
+                            <span class="text-indigo-950 font-bold">${n.title}</span>
                             <span class="text-[10px] text-slate-400 font-normal">${new Date(n.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
                         </div>
-                        <p class="text-slate-600 text-[11px] mt-0.5 font-normal">${n.message}</p>
+                        <p class="text-slate-600 text-[11px] mt-1 font-normal leading-relaxed">${n.message}</p>
                     </div>
                 `).join('');
             }
-        } catch (e) {}
+        } catch (err) {
+            if (list) {
+                list.innerHTML = `<div class="p-4 text-center text-xs text-rose-500 font-medium">Unable to load notifications (${err.message})</div>`;
+            }
+        }
     } else {
         dropdown.classList.add('hidden');
     }
@@ -2313,13 +2338,13 @@ async function toggleNotificationsDropdown(e) {
 async function handleNotificationClick(notifId, memoId) {
     try {
         await apiCall(`/notifications/${notifId}/read`, { method: 'PUT' });
-        fetchUnreadCount();
-        const dd = document.getElementById('notifications-dropdown');
-        if (dd) dd.classList.add('hidden');
-        if (memoId) {
-            showView('memo-detail', memoId);
-        }
     } catch (e) {}
+    fetchUnreadCount();
+    const dd = document.getElementById('notifications-dropdown');
+    if (dd) dd.classList.add('hidden');
+    if (memoId) {
+        showView('memo-detail', memoId);
+    }
 }
 
 async function markAllNotificationsRead(e) {
@@ -2332,12 +2357,12 @@ async function markAllNotificationsRead(e) {
         const list = document.getElementById('notifications-items-list');
         if (list && notifs) {
             list.innerHTML = notifs.map(n => `
-                <div onclick="handleNotificationClick(${n.id}, ${n.memo_id})" class="p-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer opacity-70 text-xs">
+                <div onclick="handleNotificationClick(${n.id}, ${n.memo_id})" class="p-3.5 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition opacity-60 text-xs">
                     <div class="flex items-center justify-between">
-                        <span class="text-indigo-900">${n.title}</span>
+                        <span class="text-indigo-950 font-bold">${n.title}</span>
                         <span class="text-[10px] text-slate-400 font-normal">${new Date(n.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
                     </div>
-                    <p class="text-slate-600 text-[11px] mt-0.5 font-normal">${n.message}</p>
+                    <p class="text-slate-600 text-[11px] mt-1 font-normal leading-relaxed">${n.message}</p>
                 </div>
             `).join('');
         }
