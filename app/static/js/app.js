@@ -1440,51 +1440,62 @@ async function renderSearchView() {
     container.classList.remove('hidden');
 
     // Populate search filter dropdowns
-    const deptSelect = document.getElementById('search-filter-dept');
-    deptSelect.innerHTML = '<option value="">All Departments</option>' + appState.departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+    const catSelect = document.getElementById('search-category');
+    if (catSelect) {
+        catSelect.innerHTML = '<option value="">All Categories</option>' + (appState.categories || []).map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    }
 
-    const catSelect = document.getElementById('search-filter-cat');
-    catSelect.innerHTML = '<option value="">All Categories</option>' + appState.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-
-    executeSearch();
+    executeMemoSearch();
 }
 
-async function executeSearch() {
-    const q = document.getElementById('search-input-query')?.value || '';
-    const status = document.getElementById('search-filter-status')?.value || '';
-    const priority = document.getElementById('search-filter-priority')?.value || '';
-    const deptId = document.getElementById('search-filter-dept')?.value || '';
-    const catId = document.getElementById('search-filter-cat')?.value || '';
-    const dateFrom = document.getElementById('search-date-from')?.value || '';
-    const dateTo = document.getElementById('search-date-to')?.value || '';
+async function executeMemoSearch() {
+    const q = document.getElementById('search-query')?.value.trim() || '';
+    const status = document.getElementById('search-status')?.value || '';
+    const priority = document.getElementById('search-priority')?.value || '';
+    const catId = document.getElementById('search-category')?.value || '';
+    const btn = document.getElementById('btn-search-apply');
 
     const params = new URLSearchParams();
     if (q) params.append('q', q);
     if (status && status !== 'All') params.append('status', status);
     if (priority && priority !== 'All') params.append('priority', priority);
-    if (deptId) params.append('department_id', deptId);
     if (catId) params.append('category_id', catId);
-    if (dateFrom) params.append('date_from', dateFrom);
-    if (dateTo) params.append('date_to', dateTo);
+
+    const list = document.getElementById('search-results-container');
+    const countLabel = document.getElementById('search-count-label');
+    if (!list) return;
+
+    let origHtml = '';
+    if (btn) {
+        origHtml = btn.innerHTML;
+        btn.innerHTML = `<span class="inline-flex items-center gap-1.5"><svg class="animate-spin -ml-1 mr-1 h-3.5 w-3.5 text-white inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Filtering...</span>`;
+    }
 
     try {
         const results = await apiCall(`/memos/all?${params.toString()}`);
         appState.searchResults = results;
-        const list = document.getElementById('search-results-list');
-        document.getElementById('search-count-label').textContent = `${results.length} memos found`;
+        if (countLabel) countLabel.textContent = `${results.length} memos found`;
 
         if (results.length === 0) {
-            list.innerHTML = `<div class="bg-white rounded-xl p-12 text-center text-slate-500 border border-slate-200">
-                <i data-lucide="search-x" class="w-12 h-12 mx-auto text-slate-300 mb-3"></i>
-                <h3 class="text-base font-semibold text-slate-700">No matching memos</h3>
-                <p class="text-sm mt-1">Try adjusting your keyword or filter criteria.</p>
-            </div>`;
+            list.innerHTML = `
+                <div class="bg-white rounded-3xl p-12 text-center text-slate-500 border border-slate-200">
+                    <div class="p-3 bg-slate-100 rounded-2xl w-fit mx-auto mb-3 text-slate-400">
+                        <i data-lucide="search-x" class="w-8 h-8"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-slate-800">No matching memos found</h3>
+                    <p class="text-xs text-slate-400 mt-1">Try adjusting your keywords, status, or category filter.</p>
+                </div>
+            `;
         } else {
             list.innerHTML = results.map(m => createMemoCardHTML(m, 'search')).join('');
         }
-        lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
     } catch (e) {
         showToast(e.message, 'error');
+    } finally {
+        if (btn) {
+            btn.innerHTML = origHtml;
+        }
     }
 }
 
