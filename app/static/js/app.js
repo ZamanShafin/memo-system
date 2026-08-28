@@ -1741,6 +1741,7 @@ async function renderDelegationsView() {
         userSelect.innerHTML = '<option value="">Select Colleague</option>' + eligibleUsers.map(u => `<option value="${u.id}">${u.full_name} (${u.designation || u.role})</option>`).join('');
     }
 
+    try {
         const list = document.getElementById('delegations-list-container') || document.getElementById('delegations-list');
         if (list && (!list.innerHTML || list.innerHTML.trim() === '')) {
             list.innerHTML = createLoadingSpinnerHTML('Loading active workflow delegations...');
