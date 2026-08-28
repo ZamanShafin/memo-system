@@ -823,30 +823,46 @@ function renderWorkflowActionBar(memo) {
     const isDelegate = appState.delegations.some(d => d.delegator_id === activeStep.assigned_user_id && d.delegatee_id === currentUserId && d.is_active);
 
     if (isAssignee || isDelegate || appState.user.role === 'admin') {
-        const delegateLabel = isDelegate ? `<span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded">Acting on behalf of ${activeStep.assigned_user?.full_name}</span>` : '';
+        const delegateLabel = isDelegate ? `<span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded">Acting on behalf of ${activeStep.assigned_user?.full_name}</span>` : (appState.user.role === 'admin' && !isAssignee ? `<span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded font-bold">Admin Authority Override</span>` : '');
         
         actionContainer.innerHTML = `
-            <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl mb-6">
+            <div class="p-5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl mb-6 shadow-sm">
                 <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div>
                         <div class="flex items-center gap-2">
-                            <h4 class="font-bold text-amber-900 text-sm">Action Required on this Memo</h4>
+                            <h4 class="font-black text-amber-950 text-sm">Action Required on this Memo</h4>
                             ${delegateLabel}
                         </div>
-                        <p class="text-xs text-amber-700 mt-0.5">As <b>${activeStep.role_name}</b>, please review the contents and choose a workflow action below.</p>
+                        <p class="text-xs text-amber-800 mt-0.5 font-medium">As <b>${activeStep.role_name}</b>, please review the contents and choose a workflow decision below.</p>
                     </div>
                     <div class="flex items-center gap-2 flex-wrap">
-                        <button onclick="openActionModal('approve', ${memo.id})" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
-                            <i data-lucide="check-circle" class="w-4 h-4"></i> Approve Memo
+                        <button onclick="openActionModal('approve', ${memo.id})" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i> Approve Step
                         </button>
-                        <button onclick="openActionModal('request_changes', ${memo.id})" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
+                        <button onclick="openActionModal('request_changes', ${memo.id})" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
                             <i data-lucide="edit-3" class="w-4 h-4"></i> Request Changes
                         </button>
-                        <button onclick="openActionModal('reject', ${memo.id})" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
+                        <button onclick="openActionModal('reject', ${memo.id})" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
                             <i data-lucide="x-circle" class="w-4 h-4"></i> Reject Memo
                         </button>
                     </div>
                 </div>
+            </div>
+        `;
+    } else {
+        const assignedName = activeStep.assigned_user?.full_name || 'Assigned Reviewer';
+        actionContainer.innerHTML = `
+            <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl mb-6 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-amber-100 text-amber-800 rounded-xl">
+                        <i data-lucide="clock" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-slate-800">Sequential Workflow in Progress</div>
+                        <div class="text-[11px] text-slate-500">Currently awaiting action from <b>${assignedName}</b> (${activeStep.role_name}).</div>
+                    </div>
+                </div>
+                <span class="px-2.5 py-1 text-xs font-bold bg-amber-50 text-amber-800 rounded-lg border border-amber-200">Pending Turn</span>
             </div>
         `;
     }

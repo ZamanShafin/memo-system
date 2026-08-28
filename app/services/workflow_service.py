@@ -160,14 +160,18 @@ def process_workflow_action(
             detail="No active workflow step awaiting action"
         )
     
-    # Check authorization (assignee or active delegate)
+    # Check authorization (assignee, active delegate, or organization admin)
     is_auth, on_behalf_of = is_user_authorized_for_step(db, memo, current_step, user)
     if not is_auth:
-        assigned_name = current_step.assigned_user.full_name if current_step.assigned_user else f"User #{current_step.assigned_user_id}"
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Access denied: It is currently {assigned_name}'s turn ({current_step.role_name}) to act on this memo"
-        )
+        if user.role == "admin":
+            is_auth = True
+            on_behalf_of = current_step.assigned_user_id
+        else:
+            assigned_name = current_step.assigned_user.full_name if current_step.assigned_user else f"User #{current_step.assigned_user_id}"
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied: It is currently {assigned_name}'s turn ({current_step.role_name}) to act on this memo"
+            )
     
     now = datetime.datetime.now(datetime.timezone.utc)
     action = action.lower()
