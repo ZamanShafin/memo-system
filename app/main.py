@@ -13,9 +13,13 @@ from app.routers import auth, memos, workflow, delegations, admin, audit, notifi
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize DB & Seed data on startup
-    Base.metadata.create_all(bind=engine)
-    seed_database()
+    # Initialize DB & Seed data only when using SQLite or explicit flag
+    if "sqlite" in settings.DATABASE_URL or os.getenv("INIT_DB") == "true":
+        try:
+            Base.metadata.create_all(bind=engine)
+            seed_database()
+        except Exception as e:
+            print(f"Startup DB initialization note: {e}")
     yield
 
 app = FastAPI(

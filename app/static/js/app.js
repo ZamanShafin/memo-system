@@ -117,9 +117,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function setupApp() {
     updateHeaderUI();
-    await loadInitialData();
     showView('dashboard');
-    fetchUnreadCount();
+    await loadInitialData();
 }
 
 async function loadDemoAccounts() {
@@ -189,18 +188,31 @@ function logout() {
 
 async function loadInitialData() {
     try {
-        const [depts, cats, tmpls, users] = await Promise.all([
-            apiCall('/admin/departments'),
-            apiCall('/admin/categories'),
-            apiCall('/admin/templates'),
-            apiCall('/admin/users?is_active=true')
-        ]);
-        appState.departments = depts;
-        appState.categories = cats;
-        appState.templates = tmpls;
-        appState.orgUsers = users;
+        const data = await apiCall('/memos/bootstrap');
+        appState.departments = data.departments || [];
+        appState.categories = data.categories || [];
+        appState.templates = data.templates || [];
+        appState.orgUsers = data.org_users || [];
+        appState.delegations = data.delegations || [];
+        appState.inboxMemos = data.inbox || [];
+        appState.sentMemos = data.sent || [];
+        appState.completedMemos = data.completed || [];
+        appState.reportsData = data.statistics || null;
+        appState.unreadCount = data.unread_notifications || 0;
+
+        // Update notification count badge
+        const notifBadge = document.getElementById('notif-badge');
+        if (notifBadge) {
+            notifBadge.textContent = appState.unreadCount;
+            notifBadge.classList.toggle('hidden', appState.unreadCount === 0);
+        }
+
+        // Fast render current dashboard
+        if (appState.currentView === 'dashboard') {
+            updateDashboardDOM();
+        }
     } catch (e) {
-        console.warn('Initial data load error:', e);
+        console.warn('Initial bootstrap error, falling back:', e);
     }
 }
 
@@ -325,6 +337,45 @@ function showView(viewName, memoId = null) {
     }
 }
 
+function updateDashboardDOM() {
+    const stats = appState.reportsData || { urgent_memos: 0, memos_by_status: {} };
+    const inbox = appState.inboxMemos || [];
+    const sent = appState.sentMemos || [];
+    const completed = appState.completedMemos || [];
+
+    const elInbox = document.getElementById('stat-inbox-count');
+    const elSent = document.getElementById('stat-sent-count');
+    const elCompleted = document.getElementById('stat-completed-count');
+    const elUrgent = document.getElementById('stat-urgent-count');
+
+    if (elInbox) elInbox.textContent = inbox.length;
+    if (elSent) elSent.textContent = sent.length;
+    if (elCompleted) elCompleted.textContent = completed.length;
+    if (elUrgent) elUrgent.textContent = stats.urgent_memos || 0;
+
+    // Render Action Required preview list
+    const inboxList = document.getElementById('dash-inbox-list');
+    if (inboxList) {
+        if (inbox.length === 0) {
+            inboxList.innerHTML = `<div class="p-6 text-center text-slate-500 text-sm">No pending memos requiring your action right now. All caught up! 🎉</div>`;
+        } else {
+            inboxList.innerHTML = inbox.slice(0, 5).map(m => createMemoCardHTML(m, 'action')).join('');
+        }
+    }
+
+    // Render Recent Activity / Sent preview
+    const sentList = document.getElementById('dash-sent-list');
+    if (sentList) {
+        if (sent.length === 0) {
+            sentList.innerHTML = `<div class="p-6 text-center text-slate-500 text-sm">You haven't submitted any memos yet.</div>`;
+        } else {
+            sentList.innerHTML = sent.slice(0, 5).map(m => createMemoCardHTML(m, 'sent')).join('');
+        }
+    }
+
+    if (window.lucide) lucide.createIcons();
+}
+
 // -------------------------------------------------------------
 // 1. DASHBOARD VIEW
 // -------------------------------------------------------------
@@ -332,44 +383,12 @@ async function renderDashboardView() {
     const container = document.getElementById('dashboard-view');
     container.classList.remove('hidden');
 
-    try {
-        const [inbox, sent, completed, stats] = await Promise.all([
-            apiCall('/memos/inbox'),
-            apiCall('/memos/sent'),
-            apiCall('/memos/completed'),
-            apiCall('/reports/statistics')
-        ]);
+    // Instant zero-lag render from cache
+    updateDashboardDOM();
 
-        appState.inboxMemos = inbox;
-        appState.sentMemos = sent;
-        appState.completedMemos = completed;
-        appState.reportsData = stats;
-
-        document.getElementById('stat-inbox-count').textContent = inbox.length;
-        document.getElementById('stat-sent-count').textContent = sent.length;
-        document.getElementById('stat-completed-count').textContent = completed.length;
-        document.getElementById('stat-urgent-count').textContent = stats.urgent_memos;
-
-        // Render Action Required preview list
-        const inboxList = document.getElementById('dash-inbox-list');
-        if (inbox.length === 0) {
-            inboxList.innerHTML = `<div class="p-6 text-center text-slate-500 text-sm">No pending memos requiring your action right now. All caught up! 🎉</div>`;
-        } else {
-            inboxList.innerHTML = inbox.slice(0, 5).map(m => createMemoCardHTML(m, 'action')).join('');
-        }
-
-        // Render Recent Activity / Sent preview
-        const sentList = document.getElementById('dash-sent-list');
-        if (sent.length === 0) {
-            sentList.innerHTML = `<div class="p-6 text-center text-slate-500 text-sm">You haven't submitted any memos yet.</div>`;
-        } else {
-            sentList.innerHTML = sent.slice(0, 5).map(m => createMemoCardHTML(m, 'sent')).join('');
-        }
-
-        // Initialize dashboard mini-chart
-        renderStatusPieChart('dash-status-chart', stats.memos_by_status);
-    } catch (err) {
-        showToast(err.message, 'error');
+    // If initial bootstrap not completed yet, fetch
+    if (!appState.reportsData) {
+        await loadInitialData();
     }
 }
 
@@ -382,11 +401,19 @@ async function renderInboxView() {
 
     const priorityFilter = document.getElementById('inbox-filter-priority')?.value || '';
     const sortBy = document.getElementById('inbox-sort-by')?.value || 'date_desc';
+    const list = document.getElementById('inbox-memos-list');
+
+    // Instant optimistic render from cache
+    if (appState.inboxMemos && appState.inboxMemos.length > 0 && !priorityFilter) {
+        list.innerHTML = appState.inboxMemos.map(m => createMemoCardHTML(m, 'action')).join('');
+        if (window.lucide) lucide.createIcons();
+    } else if (!list.innerHTML) {
+        list.innerHTML = `<div class="p-8 text-center text-slate-400 animate-pulse"><div class="h-4 bg-slate-200 rounded w-1/2 mx-auto mb-2"></div><div class="h-3 bg-slate-200 rounded w-1/3 mx-auto"></div></div>`;
+    }
 
     try {
         const memos = await apiCall(`/memos/inbox?priority=${priorityFilter}&sort_by=${sortBy}`);
         appState.inboxMemos = memos;
-        const list = document.getElementById('inbox-memos-list');
         if (memos.length === 0) {
             list.innerHTML = `<div class="bg-white rounded-xl p-12 text-center text-slate-500 border border-slate-200">
                 <i data-lucide="inbox" class="w-12 h-12 mx-auto text-slate-300 mb-3"></i>
@@ -396,7 +423,7 @@ async function renderInboxView() {
         } else {
             list.innerHTML = memos.map(m => createMemoCardHTML(m, 'action')).join('');
         }
-        lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
     } catch (e) {
         showToast(e.message, 'error');
     }
@@ -408,11 +435,19 @@ async function renderInboxView() {
 async function renderSentView() {
     const container = document.getElementById('sent-view');
     container.classList.remove('hidden');
+    const list = document.getElementById('sent-memos-list');
+
+    // Instant optimistic render from cache
+    if (appState.sentMemos && appState.sentMemos.length > 0) {
+        list.innerHTML = appState.sentMemos.map(m => createMemoCardHTML(m, 'sent')).join('');
+        if (window.lucide) lucide.createIcons();
+    } else if (!list.innerHTML) {
+        list.innerHTML = `<div class="p-8 text-center text-slate-400 animate-pulse"><div class="h-4 bg-slate-200 rounded w-1/2 mx-auto mb-2"></div><div class="h-3 bg-slate-200 rounded w-1/3 mx-auto"></div></div>`;
+    }
 
     try {
         const memos = await apiCall('/memos/sent');
         appState.sentMemos = memos;
-        const list = document.getElementById('sent-memos-list');
         if (memos.length === 0) {
             list.innerHTML = `<div class="bg-white rounded-xl p-12 text-center text-slate-500 border border-slate-200">
                 <i data-lucide="send" class="w-12 h-12 mx-auto text-slate-300 mb-3"></i>
@@ -422,7 +457,7 @@ async function renderSentView() {
         } else {
             list.innerHTML = memos.map(m => createMemoCardHTML(m, 'sent')).join('');
         }
-        lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
     } catch (e) {
         showToast(e.message, 'error');
     }
@@ -434,11 +469,18 @@ async function renderSentView() {
 async function renderDraftsView() {
     const container = document.getElementById('drafts-view');
     container.classList.remove('hidden');
+    const list = document.getElementById('drafts-memos-list');
+
+    if (appState.draftMemos && appState.draftMemos.length > 0) {
+        list.innerHTML = appState.draftMemos.map(m => createMemoCardHTML(m, 'draft')).join('');
+        if (window.lucide) lucide.createIcons();
+    } else if (!list.innerHTML) {
+        list.innerHTML = `<div class="p-8 text-center text-slate-400 animate-pulse"><div class="h-4 bg-slate-200 rounded w-1/2 mx-auto mb-2"></div><div class="h-3 bg-slate-200 rounded w-1/3 mx-auto"></div></div>`;
+    }
 
     try {
         const memos = await apiCall('/memos/drafts');
         appState.draftMemos = memos;
-        const list = document.getElementById('drafts-memos-list');
         if (memos.length === 0) {
             list.innerHTML = `<div class="bg-white rounded-xl p-12 text-center text-slate-500 border border-slate-200">
                 <i data-lucide="file-edit" class="w-12 h-12 mx-auto text-slate-300 mb-3"></i>
@@ -448,7 +490,7 @@ async function renderDraftsView() {
         } else {
             list.innerHTML = memos.map(m => createMemoCardHTML(m, 'draft')).join('');
         }
-        lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
     } catch (e) {
         showToast(e.message, 'error');
     }

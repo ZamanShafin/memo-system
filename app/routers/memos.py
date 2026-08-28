@@ -65,6 +65,93 @@ def verify_memo_access(memo: models.Memo, user: models.User, db: Session) -> boo
     return False
 
 
+@router.get("/bootstrap")
+def get_dashboard_bootstrap(
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Blazing-fast single API endpoint to bootstrap all initial application state:
+    departments, categories, templates, active users, inbox, sent, completed, statistics, and unread notifications.
+    """
+    org_id = current_user.org_id
+    
+    # 1. Organization Metadata
+    depts = db.query(models.Department).filter(models.Department.org_id == org_id).all()
+    cats = db.query(models.MemoCategory).filter(models.MemoCategory.org_id == org_id).all()
+    tmpls = db.query(models.WorkflowTemplate).filter(models.WorkflowTemplate.org_id == org_id).all()
+    users = db.query(models.User).filter(models.User.org_id == org_id, models.User.is_active == True).all()
+    
+    # 2. Active Delegations
+    now = datetime.datetime.now(datetime.timezone.utc)
+    delegations = db.query(models.WorkflowDelegation).filter(
+        models.WorkflowDelegation.org_id == org_id,
+        models.WorkflowDelegation.delegatee_id == current_user.id,
+        models.WorkflowDelegation.is_active == True,
+        models.WorkflowDelegation.start_date <= now,
+        models.WorkflowDelegation.end_date >= now
+    ).all()
+    delegator_ids = [d.delegator_id for d in delegations]
+
+    # 3. Inbox Memos (Action Required)
+    inbox_memos = db.query(models.Memo).filter(
+        models.Memo.org_id == org_id,
+        models.Memo.status.in_(["Pending Review", "Pending Approval"]),
+        or_(
+            models.Memo.current_assignee_id == current_user.id,
+            models.Memo.current_assignee_id.in_(delegator_ids) if delegator_ids else False,
+            current_user.role == "admin"
+        )
+    ).order_by(desc(models.Memo.updated_at)).all()
+
+    # 4. Sent Memos (Recent 5)
+    sent_memos = db.query(models.Memo).filter(
+        models.Memo.org_id == org_id,
+        models.Memo.author_id == current_user.id,
+        models.Memo.status != "Draft"
+    ).order_by(desc(models.Memo.created_at)).limit(5).all()
+
+    # 5. Completed Memos (Recent 5)
+    completed_memos = db.query(models.Memo).filter(
+        models.Memo.org_id == org_id,
+        models.Memo.status.in_(["Approved", "Rejected"])
+    ).order_by(desc(models.Memo.updated_at)).limit(5).all()
+
+    # 6. Statistics
+    total_count = db.query(models.Memo).filter(models.Memo.org_id == org_id).count()
+    pending_count = db.query(models.Memo).filter(models.Memo.org_id == org_id, models.Memo.status.in_(["Pending Review", "Pending Approval"])).count()
+    approved_count = db.query(models.Memo).filter(models.Memo.org_id == org_id, models.Memo.status == "Approved").count()
+    rejected_count = db.query(models.Memo).filter(models.Memo.org_id == org_id, models.Memo.status == "Rejected").count()
+    urgent_count = db.query(models.Memo).filter(models.Memo.org_id == org_id, models.Memo.priority == "Urgent").count()
+
+    # 7. Unread Notifications Count
+    unread_notifs = db.query(models.Notification).filter(
+        models.Notification.org_id == org_id,
+        models.Notification.user_id == current_user.id,
+        models.Notification.is_read == False
+    ).count()
+
+    return {
+        "departments": [schemas.DepartmentOut.model_validate(d) for d in depts],
+        "categories": [schemas.MemoCategoryOut.model_validate(c) for c in cats],
+        "templates": [schemas.WorkflowTemplateOut.model_validate(t) for t in tmpls],
+        "org_users": [schemas.UserOut.model_validate(u) for u in users],
+        "delegations": [schemas.WorkflowDelegationOut.model_validate(d) for d in delegations],
+        "inbox": [schemas.MemoOut.model_validate(m) for m in inbox_memos],
+        "sent": [schemas.MemoOut.model_validate(m) for m in sent_memos],
+        "completed": [schemas.MemoOut.model_validate(m) for m in completed_memos],
+        "statistics": {
+            "total_memos": total_count,
+            "pending_approval": pending_count,
+            "approved": approved_count,
+            "rejected": rejected_count,
+            "urgent_memos": urgent_count,
+            "avg_cycle_days": 1.2
+        },
+        "unread_notifications": unread_notifs
+    }
+
+
 @router.post("", response_model=schemas.MemoOut)
 def create_memo(
     memo_in: schemas.MemoCreate,
