@@ -1,10 +1,11 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.database import get_db
 from app import models, schemas, security
 from app.services import workflow_service
+from app.routers.memos import MEMO_EAGER_LOAD
 
 router = APIRouter(prefix="/workflow", tags=["Workflow Engine"])
 
@@ -28,7 +29,7 @@ def execute_workflow_action(
     if not memo:
         raise HTTPException(status_code=404, detail="Memo not found")
         
-    return workflow_service.process_workflow_action(
+    workflow_service.process_workflow_action(
         db=db,
         memo=memo,
         user=current_user,
@@ -36,6 +37,13 @@ def execute_workflow_action(
         comment=action_req.comment,
         ip_address=request.client.host if request.client else None
     )
+
+    # Re-query with eager-loading for instant response serialization
+    updated_memo = db.query(models.Memo).options(*MEMO_EAGER_LOAD).filter(
+        models.Memo.id == memo_id
+    ).first()
+    
+    return updated_memo
 
 @router.get("/{memo_id}/steps", response_model=List[schemas.WorkflowStepOut])
 def get_memo_workflow_steps(

@@ -48,6 +48,39 @@
     <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
     <!-- ============================================================ -->
+    <!-- ENTERPRISE BOOTSTRAP PRE-LOADER (Full Screen Splash Overlay) -->
+    <!-- ============================================================ -->
+    <div id="app-loader-screen" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center text-white transition-opacity duration-300 pointer-events-auto hidden">
+        <div class="flex flex-col items-center max-w-sm px-6 text-center">
+            <!-- Animated Icon Glow -->
+            <div class="relative mb-6">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-600/30 flex items-center justify-center border border-indigo-500/50 shadow-2xl animate-pulse">
+                    <i data-lucide="shield-check" class="w-8 h-8 text-indigo-400"></i>
+                </div>
+                <div class="absolute -inset-1 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 opacity-30 blur-lg animate-spin" style="animation-duration: 4s;"></div>
+            </div>
+            
+            <!-- Dynamic Status Title -->
+            <h3 id="app-loader-title" class="text-base font-black text-white tracking-wide mb-1.5">
+                Syncing Enterprise Workspace
+            </h3>
+            
+            <!-- Subtitle info -->
+            <p id="app-loader-subtitle" class="text-xs text-slate-400 mb-5">
+                Pre-loading departments, inboxes, and sequential workflows...
+            </p>
+            
+            <!-- Progress Bar -->
+            <div class="w-48 h-1.5 bg-slate-800 rounded-full overflow-hidden mb-3">
+                <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full animate-pulse w-full"></div>
+            </div>
+            <span class="text-[10px] font-mono text-indigo-400 uppercase tracking-widest font-semibold">
+                High-Speed Cloud Sync
+            </span>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
     <!-- AUTH CONTAINER (Modern Dual-Column Enterprise Portal) -->
     <!-- ============================================================ -->
     <div id="auth-container" class="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-slate-950">
@@ -1086,6 +1119,7 @@
             const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
 
+            showAppLoader('Signing In...', 'Verifying credentials and syncing workspace...');
             try {
                 const res = await apiCall('/auth/login', {
                     method: 'POST',
@@ -1093,8 +1127,9 @@
                 });
                 setSession(res.access_token, res.user, res.organization);
                 showToast(`Welcome back, ${res.user.full_name}!`, 'success');
-                setupApp();
+                setupApp(true);
             } catch (err) {
+                hideAppLoader();
                 showToast(err.message, 'error');
             }
         }

@@ -115,10 +115,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 12000);
 });
 
-async function setupApp() {
+function showAppLoader(title = 'Syncing Enterprise Workspace', subtitle = 'Pre-loading departments, inboxes, and sequential workflows...') {
+    const loader = document.getElementById('app-loader-screen');
+    if (!loader) return;
+    const titleEl = document.getElementById('app-loader-title');
+    const subtitleEl = document.getElementById('app-loader-subtitle');
+    if (titleEl) titleEl.textContent = title;
+    if (subtitleEl) subtitleEl.textContent = subtitle;
+    loader.classList.remove('hidden');
+    setTimeout(() => {
+        loader.classList.remove('opacity-0');
+    }, 10);
+    if (window.lucide) lucide.createIcons();
+}
+
+function hideAppLoader() {
+    const loader = document.getElementById('app-loader-screen');
+    if (!loader) return;
+    loader.classList.add('opacity-0');
+    setTimeout(() => {
+        loader.classList.add('hidden');
+    }, 300);
+}
+
+async function setupApp(showLoading = true) {
+    if (showLoading) {
+        showAppLoader(`Connecting to ${appState.organization?.name || 'Workspace'}`, 'Pre-loading departments, inboxes, and sequential workflows...');
+    }
     updateHeaderUI();
-    showView('dashboard');
+    
+    // Fetch all initial data bundle
     await loadInitialData();
+
+    // Reveal populated dashboard
+    showView('dashboard');
+    updateDashboardDOM();
+
+    if (showLoading) {
+        setTimeout(hideAppLoader, 250);
+    }
+    if (window.lucide) lucide.createIcons();
 }
 
 async function loadDemoAccounts() {
@@ -163,12 +199,14 @@ function renderDemoSwitcher(demoData) {
 }
 
 async function quickLogin(userId) {
+    showAppLoader('Switching Demo Persona...', 'Authenticating and preparing role workspace...');
     try {
         const res = await apiCall(`/demo/quick-login/${userId}`, { method: 'POST' });
         setSession(res.access_token, res.user, res.organization);
         showToast(`Logged in as ${res.user.full_name} (${res.organization.name})`, 'success');
-        setupApp();
+        setupApp(true);
     } catch (e) {
+        hideAppLoader();
         showToast(e.message, 'error');
     }
 }
@@ -960,22 +998,40 @@ async function submitWorkflowAction() {
     const action = modal.getAttribute('data-action');
     const memoId = modal.getAttribute('data-memo-id');
     const comment = document.getElementById('action-modal-comment').value.trim();
+    const submitBtn = document.getElementById('action-modal-submit-btn');
 
     if ((action === 'reject' || action === 'request_changes') && !comment) {
         showToast('Comment/reason is required for this action', 'warning');
         return;
     }
 
+    const origText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<span class="inline-flex items-center gap-1.5"><svg class="animate-spin -ml-1 mr-1 h-3.5 w-3.5 text-white inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Executing ${action}...</span>`;
+
     try {
-        await apiCall(`/workflow/${memoId}/action`, {
+        const updated = await apiCall(`/workflow/${memoId}/action`, {
             method: 'POST',
             body: JSON.stringify({ action, comment })
         });
         showToast(`Action '${action}' executed successfully!`, 'success');
         closeActionModal();
+
+        // Immediately update cached inboxes
+        if (appState.inboxMemos) {
+            appState.inboxMemos = appState.inboxMemos.filter(m => m.id != memoId);
+        }
+        
+        // Re-render detail view directly with eager-loaded updated memo
         renderMemoDetailView(memoId);
+        
+        // Refresh background cache
+        loadInitialData();
     } catch (e) {
         showToast(e.message, 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = origText;
     }
 }
 
