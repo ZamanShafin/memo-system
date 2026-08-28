@@ -1396,8 +1396,19 @@ function renderCommentsList(memo) {
 
 async function addDetailComment(memoId) {
     const input = document.getElementById('detail-new-comment');
+    const btn = document.getElementById('btn-post-comment');
     const text = input.value.trim();
-    if (!text) return;
+    if (!text) {
+        showToast('Please type a comment first', 'warning');
+        return;
+    }
+
+    let origHtml = '';
+    if (btn) {
+        origHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<span class="inline-flex items-center gap-1.5"><svg class="animate-spin -ml-1 mr-1.5 h-3.5 w-3.5 text-white inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Posting...</span>`;
+    }
 
     try {
         await apiCall(`/memos/${memoId}/comments`, {
@@ -1406,8 +1417,14 @@ async function addDetailComment(memoId) {
         });
         input.value = '';
         renderMemoDetailView(memoId);
+        showToast('Comment posted successfully!', 'success');
     } catch (e) {
         showToast(e.message, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
     }
 }
 

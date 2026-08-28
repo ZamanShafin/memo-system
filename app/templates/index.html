@@ -793,8 +793,8 @@
 
                         <!-- Add Comment Box -->
                         <div class="flex items-center gap-2 mt-4">
-                            <input id="detail-new-comment" type="text" placeholder="Add a comment to this memo..." class="flex-1 px-4 py-2.5 text-xs border border-slate-300 rounded-xl focus:ring-1 focus:ring-indigo-500 font-medium">
-                            <button onclick="addDetailComment(appState.selectedMemoId)" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition">
+                            <input id="detail-new-comment" type="text" onkeydown="if(event.key==='Enter') addDetailComment(appState.selectedMemoId)" placeholder="Add a comment to this memo (Press Enter to post)..." class="flex-1 px-4 py-2.5 text-xs border border-slate-300 rounded-xl focus:ring-1 focus:ring-indigo-500 font-medium">
+                            <button id="btn-post-comment" onclick="addDetailComment(appState.selectedMemoId)" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-2">
                                 Post Comment
                             </button>
                         </div>
@@ -1238,6 +1238,6 @@
     </script>
 
     <!-- App Engine Script -->
-    <script src="/static/js/app.js?v=2.2.0"></script>
+    <script src="/static/js/app.js?v=2.3.0"></script>
 </body>
 </html>
