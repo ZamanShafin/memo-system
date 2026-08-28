@@ -191,7 +191,7 @@ function clearUserDataAndDOM() {
         'user-modal',
         'cat-modal',
         'notifications-dropdown',
-        'demo-switcher-dropdown'
+        'demo-switcher-menu'
     ];
     modals.forEach(id => {
         const el = document.getElementById(id);
@@ -263,9 +263,16 @@ async function loadDemoAccounts() {
 function renderDemoSwitcher(demoData) {
     const container = document.getElementById('demo-switcher-dropdown');
     if (!container) return;
+    container.classList.remove('hidden');
+
+    const accounts = (demoData && demoData.length > 0) ? demoData : appState.demoAccounts;
+    if (!accounts || accounts.length === 0) {
+        loadDemoAccounts();
+        return;
+    }
 
     let html = '';
-    demoData.forEach(org => {
+    accounts.forEach(org => {
         html += `<div class="px-3 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-slate-800">${org.org_name} (${org.org_code})</div>`;
         org.users.forEach(u => {
             const isCurrent = appState.user && appState.user.id === u.id;
