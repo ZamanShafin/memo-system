@@ -32,23 +32,39 @@ def test_login_wrong_tenant():
     assert res.status_code == 401
 
 def test_tenant_isolation_memos():
-    # Login as Nexus Financial User
-    nexus_res = client.post("/api/v1/auth/login", json={
-        "org_code": "nexus",
-        "email": "lead.analyst@nexusgroup.com",
+    import uuid
+    unique_suffix = uuid.uuid4().hex[:6]
+    test_code = f"iso{unique_suffix}"
+    
+    # Register new isolated organization
+    reg_res = client.post("/api/v1/auth/register-organization", json={
+        "name": f"Isolation Test {unique_suffix}",
+        "code": test_code,
+        "admin_name": "Iso Admin",
+        "admin_email": f"admin@{test_code}.com",
+        "admin_password": "password123"
+    })
+    assert reg_res.status_code == 200
+    
+    # Login as the new isolated organization admin
+    login_res = client.post("/api/v1/auth/login", json={
+        "org_code": test_code,
+        "email": f"admin@{test_code}.com",
         "password": "password123"
     })
-    nexus_token = nexus_res.json()["access_token"]
+    assert login_res.status_code == 200
+    iso_token = login_res.json()["access_token"]
+    iso_org_id = login_res.json()["organization"]["id"]
     
-    # Nexus user requests memos
-    memos_res = client.get("/api/v1/memos/all", headers={"Authorization": f"Bearer {nexus_token}"})
+    # Isolated user requests memos
+    memos_res = client.get("/api/v1/memos/all", headers={"Authorization": f"Bearer {iso_token}"})
     assert memos_res.status_code == 200
     memos = memos_res.json()
     
-    # Ensure NO Acme memos are visible to Nexus user
+    # Ensure NO Acme memos are visible to the isolated organization
     for m in memos:
         assert "ACME" not in m["memo_number"]
-        assert m["org_id"] == nexus_res.json()["organization"]["id"]
+        assert m["org_id"] == iso_org_id
 
 def test_forgot_password_reset():
     # 1. Reset password for Jessica
