@@ -485,12 +485,16 @@ function showView(viewName, memoId = null) {
     authContainer.classList.add('hidden');
     mainContainer.classList.remove('hidden');
 
-    // Update active state in sidebar nav items
+    // Update active state in sidebar nav items and auto-scroll active button into view
     document.querySelectorAll('.nav-link').forEach(link => {
         const target = link.getAttribute('data-view');
         if (target === viewName) {
             link.classList.add('bg-indigo-700', 'text-white');
             link.classList.remove('text-indigo-100', 'hover:bg-indigo-800');
+            // Auto-center active button in the scrollable nav bar
+            try {
+                link.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            } catch (e) {}
         } else {
             link.classList.remove('bg-indigo-700', 'text-white');
             link.classList.add('text-indigo-100', 'hover:bg-indigo-800');
@@ -543,6 +547,58 @@ function showView(viewName, memoId = null) {
             break;
     }
 }
+
+// Sub-Navigation Horizontal Scroll Controls
+function scrollSubNav(direction) {
+    const nav = document.getElementById('sub-nav-bar');
+    if (!nav) return;
+    const amount = direction === 'left' ? -240 : 240;
+    nav.scrollBy({ left: amount, behavior: 'smooth' });
+}
+
+// Global Keyboard Navigation (← / → Arrow Keys)
+document.addEventListener('keydown', (e) => {
+    // Only intercept if user is logged in
+    if (!appState.token || !appState.user) return;
+
+    // Do not intercept if user is typing inside an input, textarea, select, or editor
+    const activeEl = document.activeElement;
+    if (activeEl && (
+        activeEl.tagName === 'INPUT' ||
+        activeEl.tagName === 'TEXTAREA' ||
+        activeEl.tagName === 'SELECT' ||
+        activeEl.isContentEditable ||
+        activeEl.closest('.ql-editor') ||
+        activeEl.closest('.modal') ||
+        !activeEl.closest('#main-app-container')
+    )) {
+        return;
+    }
+
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        const navButtons = Array.from(document.querySelectorAll('#sub-nav-bar .nav-link'));
+        const visibleTabs = navButtons.filter(btn => {
+            if (btn.classList.contains('admin-only-nav') && appState.user.role !== 'admin') return false;
+            return btn.offsetParent !== null;
+        });
+
+        if (visibleTabs.length === 0) return;
+
+        const currentIdx = visibleTabs.findIndex(b => b.getAttribute('data-view') === appState.currentView);
+        if (currentIdx === -1) return;
+
+        e.preventDefault();
+        if (e.key === 'ArrowRight') {
+            const nextIdx = (currentIdx + 1) % visibleTabs.length;
+            const targetView = visibleTabs[nextIdx].getAttribute('data-view');
+            showView(targetView);
+        } else if (e.key === 'ArrowLeft') {
+            const prevIdx = (currentIdx - 1 + visibleTabs.length) % visibleTabs.length;
+            const targetView = visibleTabs[prevIdx].getAttribute('data-view');
+            showView(targetView);
+        }
+    }
+});
 
 function updateDashboardDOM() {
     const stats = appState.reportsData || { urgent_memos: 0, memos_by_status: [] };
