@@ -1591,8 +1591,30 @@ async function toggleDelegationStatus(delegationId, isActive) {
 }
 
 // -------------------------------------------------------------
-// 10. ADMIN CONSOLE VIEW
+// 10. ADMIN CONSOLE VIEW & DEPARTMENT MANAGEMENT
 // -------------------------------------------------------------
+function switchAdminTab(tabName) {
+    const tabs = ['users', 'departments', 'categories', 'templates'];
+    tabs.forEach(t => {
+        const panel = document.getElementById(`admin-${t}-panel`);
+        const btn = document.getElementById(`admin-tab-${t === 'departments' ? 'depts' : t === 'categories' ? 'cats' : t === 'templates' ? 'tmpls' : 'users'}-btn`);
+        if (panel) {
+            if (t === tabName) {
+                panel.classList.remove('hidden');
+            } else {
+                panel.classList.add('hidden');
+            }
+        }
+        if (btn) {
+            if (t === tabName) {
+                btn.className = 'p-4 bg-indigo-50 border-2 border-indigo-600 rounded-2xl font-black text-xs text-indigo-900 shadow-sm transition text-left';
+            } else {
+                btn.className = 'p-4 bg-white border border-slate-200 rounded-2xl font-bold text-xs text-slate-800 hover:border-indigo-500 transition text-left';
+            }
+        }
+    });
+}
+
 async function renderAdminView() {
     const container = document.getElementById('admin-view');
     container.classList.remove('hidden');
@@ -1603,6 +1625,7 @@ async function renderAdminView() {
         return;
     }
 
+    switchAdminTab('users');
     await Promise.all([
         renderAdminDepartments(),
         renderAdminUsers(),
@@ -1614,36 +1637,116 @@ async function renderAdminView() {
 async function renderAdminDepartments() {
     const depts = await apiCall('/admin/departments');
     appState.departments = depts;
-    const list = document.getElementById('admin-dept-list');
-    list.innerHTML = depts.map(d => `
-        <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-            <div>
-                <div class="font-bold text-slate-800">${d.name} ${d.is_active ? '' : '<span class="text-rose-500 font-normal">(Inactive)</span>'}</div>
-                <div class="text-slate-500">${d.description || 'No description'} • <b>${d.user_count}</b> users</div>
-            </div>
-            <button onclick="toggleDeptActive(${d.id}, ${!d.is_active})" class="px-2.5 py-1 text-[11px] font-semibold rounded border ${d.is_active ? 'border-slate-300 text-slate-600 hover:bg-slate-100' : 'border-emerald-300 text-emerald-700 bg-emerald-50'}">
-                ${d.is_active ? 'Deactivate' : 'Activate'}
-            </button>
-        </div>
-    `).join('');
+    const container = document.getElementById('admin-depts-table-container');
+    if (!container) return;
+
+    if (depts.length === 0) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs">No corporate departments defined yet. Click "+ Add Department" to create one.</div>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <table class="w-full text-left text-xs border border-slate-200 rounded-2xl overflow-hidden">
+            <thead class="bg-slate-50 text-slate-600 uppercase font-black text-[10px] border-b border-slate-200">
+                <tr>
+                    <th class="px-4 py-3">Department Name</th>
+                    <th class="px-4 py-3">Description</th>
+                    <th class="px-4 py-3">Assigned Staff</th>
+                    <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 bg-white">
+                ${depts.map(d => `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-4 py-3 font-bold text-slate-900">${d.name}</td>
+                        <td class="px-4 py-3 text-slate-500 max-w-xs truncate">${d.description || '—'}</td>
+                        <td class="px-4 py-3 font-semibold text-indigo-700">${d.user_count} members</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded-md ${d.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                                ${d.is_active ? 'Active' : 'Deactivated'}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-right space-x-2">
+                            <button onclick="showEditDeptModal(${d.id})" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[11px] transition">
+                                Rename / Edit
+                            </button>
+                            <button onclick="toggleDeptActive(${d.id}, ${!d.is_active})" class="px-2.5 py-1 font-bold rounded-lg text-[11px] transition ${d.is_active ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'}">
+                                ${d.is_active ? 'Deactivate' : 'Activate'}
+                            </button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
 }
 
-async function addDepartmentSubmit() {
-    const name = document.getElementById('new-dept-name').value.trim();
-    const desc = document.getElementById('new-dept-desc').value.trim();
+function showCreateDeptModal() {
+    document.getElementById('dept-modal-id').value = '';
+    document.getElementById('dept-modal-title').textContent = 'Add Corporate Department';
+    document.getElementById('dept-modal-name').value = '';
+    document.getElementById('dept-modal-desc').value = '';
+    document.getElementById('dept-modal-status-row').classList.add('hidden');
+    document.getElementById('dept-modal').classList.remove('hidden');
+}
+
+function showEditDeptModal(deptId) {
+    const dept = appState.departments.find(d => d.id === deptId);
+    if (!dept) return;
+    document.getElementById('dept-modal-id').value = dept.id;
+    document.getElementById('dept-modal-title').textContent = `Edit / Rename: ${dept.name}`;
+    document.getElementById('dept-modal-name').value = dept.name;
+    document.getElementById('dept-modal-desc').value = dept.description || '';
+    document.getElementById('dept-modal-active').checked = dept.is_active;
+    document.getElementById('dept-modal-status-row').classList.remove('hidden');
+    document.getElementById('dept-modal').classList.remove('hidden');
+}
+
+function closeDeptModal() {
+    document.getElementById('dept-modal').classList.add('hidden');
+}
+
+async function handleDeptFormSubmit(e) {
+    e.preventDefault();
+    const id = document.getElementById('dept-modal-id').value;
+    const name = document.getElementById('dept-modal-name').value.trim();
+    const description = document.getElementById('dept-modal-desc').value.trim();
+    const is_active = document.getElementById('dept-modal-active').checked;
+    const btn = document.getElementById('btn-save-dept');
+
     if (!name) return;
 
+    let origHtml = '';
+    if (btn) {
+        origHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<span class="inline-flex items-center gap-1.5"><svg class="animate-spin -ml-1 mr-1 h-3.5 w-3.5 text-white inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Saving...</span>`;
+    }
+
     try {
-        await apiCall('/admin/departments', {
-            method: 'POST',
-            body: JSON.stringify({ name, description: desc })
-        });
-        document.getElementById('new-dept-name').value = '';
-        document.getElementById('new-dept-desc').value = '';
-        showToast('Department added!', 'success');
+        if (id) {
+            await apiCall(`/admin/departments/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ name, description, is_active })
+            });
+            showToast('Department updated successfully!', 'success');
+        } else {
+            await apiCall('/admin/departments', {
+                method: 'POST',
+                body: JSON.stringify({ name, description })
+            });
+            showToast('Department created successfully!', 'success');
+        }
+        closeDeptModal();
         renderAdminDepartments();
-    } catch (e) {
-        showToast(e.message, 'error');
+    } catch (err) {
+        showToast(err.message, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
     }
 }
 
@@ -1653,6 +1756,7 @@ async function toggleDeptActive(deptId, newStatus) {
             method: 'PUT',
             body: JSON.stringify({ is_active: newStatus })
         });
+        showToast(`Department ${newStatus ? 'activated' : 'deactivated'}`, 'info');
         renderAdminDepartments();
     } catch (e) {
         showToast(e.message, 'error');
@@ -1662,55 +1766,160 @@ async function toggleDeptActive(deptId, newStatus) {
 async function renderAdminUsers() {
     const users = await apiCall('/admin/users');
     appState.orgUsers = users;
-    const list = document.getElementById('admin-user-list');
+    const container = document.getElementById('admin-users-table-container');
+    if (!container) return;
 
-    // Populate user dept select
-    const deptSelect = document.getElementById('new-user-dept');
-    deptSelect.innerHTML = '<option value="">Select Department</option>' + appState.departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+    // Populate user modal dept dropdown
+    const deptSelect = document.getElementById('user-modal-dept');
+    if (deptSelect) {
+        deptSelect.innerHTML = '<option value="">No Department / General</option>' + (appState.departments || []).map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+    }
 
-    list.innerHTML = users.map(u => `
-        <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-            <div>
-                <div class="font-bold text-slate-800">${u.full_name} <span class="capitalize font-semibold text-indigo-600">(${u.role})</span></div>
-                <div class="text-slate-500">${u.email} • ${u.designation || 'No title'} • ${u.is_active ? '<span class="text-emerald-600">Active</span>' : '<span class="text-rose-600">Inactive</span>'}</div>
-            </div>
-            <button onclick="toggleUserActive(${u.id}, ${!u.is_active})" class="px-2.5 py-1 text-[11px] font-semibold rounded border ${u.is_active ? 'border-slate-300 text-slate-600 hover:bg-slate-100' : 'border-emerald-300 text-emerald-700 bg-emerald-50'}">
-                ${u.is_active ? 'Deactivate' : 'Activate'}
-            </button>
-        </div>
-    `).join('');
-}
-
-async function addUserSubmit() {
-    const email = document.getElementById('new-user-email').value.trim();
-    const full_name = document.getElementById('new-user-name').value.trim();
-    const designation = document.getElementById('new-user-designation').value.trim();
-    const department_id = document.getElementById('new-user-dept').value || null;
-    const role = document.getElementById('new-user-role').value;
-    const password = document.getElementById('new-user-password').value;
-
-    if (!email || !full_name || !password) {
-        showToast('Please fill all required user fields', 'warning');
+    if (users.length === 0) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs">No users found.</div>`;
         return;
     }
 
+    container.innerHTML = `
+        <table class="w-full text-left text-xs border border-slate-200 rounded-2xl overflow-hidden">
+            <thead class="bg-slate-50 text-slate-600 uppercase font-black text-[10px] border-b border-slate-200">
+                <tr>
+                    <th class="px-4 py-3">Full Name & Email</th>
+                    <th class="px-4 py-3">Designation</th>
+                    <th class="px-4 py-3">Department</th>
+                    <th class="px-4 py-3">Role</th>
+                    <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 bg-white">
+                ${users.map(u => {
+                    const dept = appState.departments.find(d => d.id === u.department_id);
+                    return `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="px-4 py-3">
+                                <div class="font-bold text-slate-900">${u.full_name}</div>
+                                <div class="text-slate-500 text-[11px]">${u.email}</div>
+                            </td>
+                            <td class="px-4 py-3 text-slate-700 font-medium">${u.designation || '—'}</td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-0.5 text-[10px] font-semibold bg-indigo-50 text-indigo-700 rounded border border-indigo-100">
+                                    ${dept ? dept.name : 'Unassigned'}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="uppercase text-[10px] font-black ${u.role === 'admin' ? 'text-amber-600' : 'text-slate-600'}">${u.role}</span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-md ${u.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                                    ${u.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-right space-x-2">
+                                <button onclick="showEditUserModal(${u.id})" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[11px] transition">
+                                    Edit / Dept
+                                </button>
+                                <button onclick="toggleUserActive(${u.id}, ${!u.is_active})" class="px-2.5 py-1 font-bold rounded-lg text-[11px] transition ${u.is_active ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'}">
+                                    ${u.is_active ? 'Deactivate' : 'Activate'}
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function showCreateUserModal() {
+    document.getElementById('user-modal-id').value = '';
+    document.getElementById('user-modal-title').textContent = 'Add Organization User';
+    document.getElementById('user-modal-name').value = '';
+    document.getElementById('user-modal-email').value = '';
+    document.getElementById('user-modal-designation').value = '';
+    document.getElementById('user-modal-dept').value = '';
+    document.getElementById('user-modal-role').value = 'user';
+    document.getElementById('user-modal-pwd').value = '';
+    document.getElementById('user-modal-pwd-label').textContent = 'Password *';
+    document.getElementById('user-modal-pwd').required = true;
+    document.getElementById('user-modal-status-row').classList.add('hidden');
+    document.getElementById('user-modal').classList.remove('hidden');
+}
+
+function showEditUserModal(userId) {
+    const user = appState.orgUsers.find(u => u.id === userId);
+    if (!user) return;
+    document.getElementById('user-modal-id').value = user.id;
+    document.getElementById('user-modal-title').textContent = `Edit User: ${user.full_name}`;
+    document.getElementById('user-modal-name').value = user.full_name;
+    document.getElementById('user-modal-email').value = user.email;
+    document.getElementById('user-modal-designation').value = user.designation || '';
+    document.getElementById('user-modal-dept').value = user.department_id || '';
+    document.getElementById('user-modal-role').value = user.role;
+    document.getElementById('user-modal-pwd').value = '';
+    document.getElementById('user-modal-pwd-label').textContent = 'New Password (leave blank to keep)';
+    document.getElementById('user-modal-pwd').required = false;
+    document.getElementById('user-modal-active').checked = user.is_active;
+    document.getElementById('user-modal-status-row').classList.remove('hidden');
+    document.getElementById('user-modal').classList.remove('hidden');
+}
+
+function closeUserModal() {
+    document.getElementById('user-modal').classList.add('hidden');
+}
+
+async function handleUserFormSubmit(e) {
+    e.preventDefault();
+    const id = document.getElementById('user-modal-id').value;
+    const full_name = document.getElementById('user-modal-name').value.trim();
+    const email = document.getElementById('user-modal-email').value.trim();
+    const designation = document.getElementById('user-modal-designation').value.trim();
+    const deptId = document.getElementById('user-modal-dept').value;
+    const role = document.getElementById('user-modal-role').value;
+    const password = document.getElementById('user-modal-pwd').value;
+    const is_active = document.getElementById('user-modal-active').checked;
+    const btn = document.getElementById('btn-save-user');
+
+    if (!full_name || !email) return;
+
+    let origHtml = '';
+    if (btn) {
+        origHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<span class="inline-flex items-center gap-1.5"><svg class="animate-spin -ml-1 mr-1 h-3.5 w-3.5 text-white inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Saving...</span>`;
+    }
+
     try {
-        await apiCall('/admin/users', {
-            method: 'POST',
-            body: JSON.stringify({
-                email, full_name, designation,
-                department_id: department_id ? parseInt(department_id) : null,
-                role, password, is_active: true
-            })
-        });
-        showToast('User created successfully!', 'success');
-        document.getElementById('new-user-email').value = '';
-        document.getElementById('new-user-name').value = '';
-        document.getElementById('new-user-designation').value = '';
-        document.getElementById('new-user-password').value = '';
+        if (id) {
+            const payload = {
+                full_name, email, designation, role, is_active,
+                department_id: deptId ? parseInt(deptId) : null
+            };
+            if (password) payload.password = password;
+            await apiCall(`/admin/users/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(payload)
+            });
+            showToast('User profile updated successfully!', 'success');
+        } else {
+            await apiCall('/admin/users', {
+                method: 'POST',
+                body: JSON.stringify({
+                    full_name, email, designation, role, password, is_active: true,
+                    department_id: deptId ? parseInt(deptId) : null
+                })
+            });
+            showToast('User created successfully!', 'success');
+        }
+        closeUserModal();
         renderAdminUsers();
-    } catch (e) {
-        showToast(e.message, 'error');
+    } catch (err) {
+        showToast(err.message, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
     }
 }
 
@@ -1720,6 +1929,7 @@ async function toggleUserActive(userId, newStatus) {
             method: 'PUT',
             body: JSON.stringify({ is_active: newStatus })
         });
+        showToast(`User status updated to ${newStatus ? 'Active' : 'Inactive'}`, 'info');
         renderAdminUsers();
     } catch (e) {
         showToast(e.message, 'error');
@@ -1729,21 +1939,39 @@ async function toggleUserActive(userId, newStatus) {
 async function renderAdminCategories() {
     const cats = await apiCall('/admin/categories');
     appState.categories = cats;
-    const list = document.getElementById('admin-cat-list');
-    list.innerHTML = cats.map(c => `
-        <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-            <div>
-                <div class="font-bold text-slate-800">${c.name}</div>
-                <div class="text-slate-500">${c.description || 'No description'}</div>
-            </div>
-            <span class="px-2 py-0.5 text-[10px] bg-indigo-50 text-indigo-700 rounded font-semibold">Category</span>
+    const container = document.getElementById('admin-cats-table-container');
+    if (!container) return;
+
+    if (cats.length === 0) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs">No categories defined yet.</div>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            ${cats.map(c => `
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-start justify-between gap-3">
+                    <div>
+                        <div class="font-bold text-slate-900">${c.name}</div>
+                        <div class="text-slate-500 text-[11px] mt-0.5">${c.description || 'No description provided.'}</div>
+                    </div>
+                    <span class="px-2 py-0.5 text-[10px] font-bold bg-indigo-50 text-indigo-700 rounded border border-indigo-100">Category</span>
+                </div>
+            `).join('')}
         </div>
-    `).join('');
+    `;
 }
 
-async function addCategorySubmit() {
-    const name = document.getElementById('new-cat-name').value.trim();
-    const desc = document.getElementById('new-cat-desc').value.trim();
+function showCreateCatModal() {
+    document.getElementById('cat-modal-name').value = '';
+    document.getElementById('cat-modal-desc').value = '';
+    document.getElementById('cat-modal').classList.remove('hidden');
+}
+
+async function handleCatFormSubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('cat-modal-name').value.trim();
+    const desc = document.getElementById('cat-modal-desc').value.trim();
     if (!name) return;
 
     try {
@@ -1751,29 +1979,42 @@ async function addCategorySubmit() {
             method: 'POST',
             body: JSON.stringify({ name, description: desc })
         });
-        document.getElementById('new-cat-name').value = '';
-        document.getElementById('new-cat-desc').value = '';
-        showToast('Category created!', 'success');
+        showToast('Category created successfully!', 'success');
+        document.getElementById('cat-modal').classList.add('hidden');
         renderAdminCategories();
-    } catch (e) {
-        showToast(e.message, 'error');
+    } catch (err) {
+        showToast(err.message, 'error');
     }
 }
 
 async function renderAdminTemplates() {
     const tmpls = await apiCall('/admin/templates');
     appState.templates = tmpls;
-    const list = document.getElementById('admin-tmpl-list');
-    list.innerHTML = tmpls.map(t => {
+    const container = document.getElementById('admin-tmpls-table-container');
+    if (!container) return;
+
+    if (tmpls.length === 0) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs">No reusable workflow templates created yet.</div>`;
+        return;
+    }
+
+    container.innerHTML = tmpls.map(t => {
         let stepCount = 0;
         try { stepCount = JSON.parse(t.steps_json).length; } catch (e) {}
         return `
-            <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs mb-2">
-                <div class="font-bold text-slate-800">${t.name} <span class="text-indigo-600 font-normal">(${stepCount} steps)</span></div>
-                <div class="text-slate-500 text-[11px]">${t.description || 'No description'}</div>
+            <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1">
+                <div class="flex items-center justify-between">
+                    <span class="font-bold text-slate-900 text-sm">${t.name}</span>
+                    <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 rounded-full font-bold text-[10px]">${stepCount} Approval Steps</span>
+                </div>
+                <p class="text-slate-500 text-[11px]">${t.description || 'Pre-configured institutional approval chain.'}</p>
             </div>
         `;
     }).join('');
+}
+
+function showCreateTemplateModal() {
+    showToast('Use New Memo form with "Save as Template" option or API endpoint to define templates.', 'info');
 }
 
 // -------------------------------------------------------------

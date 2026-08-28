@@ -1159,6 +1159,113 @@
         </div>
     </div>
 
+    <!-- Admin Department Modal -->
+    <div id="dept-modal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 id="dept-modal-title" class="font-black text-slate-900 text-sm">Add Corporate Department</h3>
+                <button onclick="closeDeptModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">&times;</button>
+            </div>
+            <form onsubmit="handleDeptFormSubmit(event)" class="space-y-3">
+                <input type="hidden" id="dept-modal-id" value="">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Department Name *</label>
+                    <input id="dept-modal-name" type="text" required placeholder="e.g. Engineering & IT" class="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Description</label>
+                    <textarea id="dept-modal-desc" rows="2" placeholder="Brief description of department scope..." class="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+                <div id="dept-modal-status-row" class="flex items-center gap-2 pt-1 hidden">
+                    <input id="dept-modal-active" type="checkbox" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                    <label for="dept-modal-active" class="text-xs font-bold text-slate-700">Active Department Status</label>
+                </div>
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeDeptModal()" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200">Cancel</button>
+                    <button id="btn-save-dept" type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm">Save Department</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin User Modal -->
+    <div id="user-modal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 id="user-modal-title" class="font-black text-slate-900 text-sm">Add Organization User</h3>
+                <button onclick="closeUserModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">&times;</button>
+            </div>
+            <form onsubmit="handleUserFormSubmit(event)" class="space-y-3">
+                <input type="hidden" id="user-modal-id" value="">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Full Name *</label>
+                        <input id="user-modal-name" type="text" required placeholder="Jane Doe" class="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email Address *</label>
+                        <input id="user-modal-email" type="email" required placeholder="jane@org.com" class="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Job Designation</label>
+                        <input id="user-modal-designation" type="text" placeholder="Senior Analyst" class="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Assigned Department</label>
+                        <select id="user-modal-dept" class="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl bg-white"></select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">System Role</label>
+                        <select id="user-modal-role" class="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl bg-white">
+                            <option value="user">User (Standard Workflow Participant)</option>
+                            <option value="admin">Administrator (Full Org Console Access)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label id="user-modal-pwd-label" class="block text-xs font-bold text-slate-700 uppercase mb-1">Password *</label>
+                        <input id="user-modal-pwd" type="password" placeholder="••••••••" class="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl">
+                    </div>
+                </div>
+                <div id="user-modal-status-row" class="flex items-center gap-2 pt-1 hidden">
+                    <input id="user-modal-active" type="checkbox" checked class="rounded text-indigo-600">
+                    <label for="user-modal-active" class="text-xs font-bold text-slate-700">Active Account Status</label>
+                </div>
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200">Cancel</button>
+                    <button id="btn-save-user" type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm">Save User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Category Modal -->
+    <div id="cat-modal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-black text-slate-900 text-sm">Add Memo Category</h3>
+                <button onclick="document.getElementById('cat-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-lg font-bold">&times;</button>
+            </div>
+            <form onsubmit="handleCatFormSubmit(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Category Name *</label>
+                    <input id="cat-modal-name" type="text" required placeholder="e.g. Budgetary Requisitions" class="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Description</label>
+                    <textarea id="cat-modal-desc" rows="2" placeholder="Brief category description..." class="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl"></textarea>
+                </div>
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="document.getElementById('cat-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 shadow-sm">Save Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Login & Auth Handlers Script -->
     <script>
         function togglePasswordVisibility(inputId) {
@@ -1241,6 +1348,6 @@
     </script>
 
     <!-- App Engine Script -->
-    <script src="/static/js/app.js?v=2.4.0"></script>
+    <script src="/static/js/app.js?v=2.5.0"></script>
 </body>
 </html>
