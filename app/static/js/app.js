@@ -1483,7 +1483,7 @@ async function executeMemoSearch() {
                         <i data-lucide="search-x" class="w-8 h-8"></i>
                     </div>
                     <h3 class="text-sm font-bold text-slate-800">No matching memos found</h3>
-                    <p class="text-xs text-slate-400 mt-1">Try adjusting your keywords, status, or category filter.</p>
+                    <p class="text-xs text-slate-400 mt-1 max-w-md mx-auto">No memos matched your query. Note: In compliance with governance rules, users only see memos they authored or are part of in the sequential workflow.</p>
                 </div>
             `;
         } else {
