@@ -5,6 +5,30 @@
 
 const API_BASE = '/api/v1';
 
+const DEFAULT_DEMO_ACCOUNTS = [
+    {
+        org_name: "Acme Corporation",
+        org_code: "ACME",
+        users: [
+            { id: 1, full_name: "Sarah Jenkins", email: "admin@acmecorp.com", designation: "Chief Operating Officer", role: "admin", department: "Executive Operations" },
+            { id: 5, full_name: "Eleanor Vance", email: "ceo@acmecorp.com", designation: "Chief Executive Officer (CEO)", role: "user", department: "Executive Operations" },
+            { id: 3, full_name: "Rachel Green", email: "finance.mgr@acmecorp.com", designation: "Chief Financial Manager", role: "user", department: "Finance & Accounts" },
+            { id: 4, full_name: "Marcus Sterling", email: "director@acmecorp.com", designation: "Director of Operations", role: "user", department: "Operations" },
+            { id: 2, full_name: "David Vance", email: "head.eng@acmecorp.com", designation: "VP of Engineering", role: "user", department: "Engineering & IT" },
+            { id: 6, full_name: "Alex Morgan", email: "alex.morgan@acmecorp.com", designation: "Senior Software Engineer / Team Lead", role: "user", department: "Engineering & IT" },
+            { id: 7, full_name: "Jessica Taylor", email: "jessica.taylor@acmecorp.com", designation: "Lead Product Designer", role: "user", department: "Product Strategy" }
+        ]
+    },
+    {
+        org_name: "Nexus Global Group",
+        org_code: "NEXUS",
+        users: [
+            { id: 8, full_name: "Jonathan Hayes", email: "admin@nexusgroup.com", designation: "Managing Director", role: "admin", department: "Corporate Strategy" },
+            { id: 9, full_name: "Victoria Price", email: "lead.analyst@nexusgroup.com", designation: "Principal Financial Analyst", role: "user", department: "Financial Advisory" }
+        ]
+    }
+];
+
 // Global Application State
 window.appState = {
     token: localStorage.getItem('memo_token') || '',
@@ -28,7 +52,7 @@ window.appState = {
     auditLogs: [],
     reportsData: null,
     quillEditor: null,
-    demoAccounts: [],
+    demoAccounts: DEFAULT_DEMO_ACCOUNTS,
     charts: {}
 };
 
@@ -242,21 +266,56 @@ async function setupApp(showLoading = true) {
     if (window.lucide) lucide.createIcons();
 }
 
-async function loadDemoAccounts() {
-    const cached = sessionStorage.getItem('memo_demo_accounts');
-    if (cached) {
-        try {
-            appState.demoAccounts = JSON.parse(cached);
-            renderDemoSwitcher(appState.demoAccounts);
-        } catch (e) {}
+function toggleDemoSwitcherMenu(e) {
+    if (e) {
+        e.stopPropagation();
+        e.preventDefault();
     }
+    const menu = document.getElementById('demo-switcher-menu');
+    if (!menu) return;
+    const isHidden = menu.classList.contains('hidden');
+    
+    // Close other dropdowns
+    const notifMenu = document.getElementById('notifications-dropdown');
+    if (notifMenu) notifMenu.classList.add('hidden');
+
+    if (isHidden) {
+        renderDemoSwitcher(appState.demoAccounts);
+        menu.classList.remove('hidden');
+    } else {
+        menu.classList.add('hidden');
+    }
+}
+
+// Global click-away listener for dropdowns
+document.addEventListener('click', (e) => {
+    const demoMenu = document.getElementById('demo-switcher-menu');
+    const demoBtn = document.getElementById('btn-demo-switcher');
+    if (demoMenu && !demoMenu.classList.contains('hidden')) {
+        if (!demoMenu.contains(e.target) && (!demoBtn || !demoBtn.contains(e.target))) {
+            demoMenu.classList.add('hidden');
+        }
+    }
+    const notifMenu = document.getElementById('notifications-dropdown');
+    const notifBtn = document.getElementById('btn-notifications-bell');
+    if (notifMenu && !notifMenu.classList.contains('hidden')) {
+        if (!notifMenu.contains(e.target) && (!notifBtn || !notifBtn.contains(e.target))) {
+            notifMenu.classList.add('hidden');
+        }
+    }
+});
+
+async function loadDemoAccounts() {
     try {
         const data = await apiCall('/demo/accounts');
-        appState.demoAccounts = data;
-        sessionStorage.setItem('memo_demo_accounts', JSON.stringify(data));
-        renderDemoSwitcher(data);
+        if (data && data.length > 0) {
+            appState.demoAccounts = data;
+            sessionStorage.setItem('memo_demo_accounts', JSON.stringify(data));
+            renderDemoSwitcher(data);
+        }
     } catch (e) {
-        console.warn('Could not load demo accounts:', e);
+        // Fallback to DEFAULT_DEMO_ACCOUNTS
+        renderDemoSwitcher(DEFAULT_DEMO_ACCOUNTS);
     }
 }
 
@@ -265,16 +324,12 @@ function renderDemoSwitcher(demoData) {
     if (!container) return;
     container.classList.remove('hidden');
 
-    const accounts = (demoData && demoData.length > 0) ? demoData : appState.demoAccounts;
-    if (!accounts || accounts.length === 0) {
-        loadDemoAccounts();
-        return;
-    }
+    const accounts = (demoData && demoData.length > 0) ? demoData : (appState.demoAccounts || DEFAULT_DEMO_ACCOUNTS);
 
     let html = '';
     accounts.forEach(org => {
         html += `<div class="px-3 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-slate-800">${org.org_name} (${org.org_code})</div>`;
-        org.users.forEach(u => {
+        (org.users || []).forEach(u => {
             const isCurrent = appState.user && appState.user.id === u.id;
             html += `
                 <button onclick="quickLogin(${u.id})" class="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-indigo-50 dark:hover:bg-slate-700 transition ${isCurrent ? 'bg-indigo-50/80 font-bold text-indigo-700' : 'text-slate-700 dark:text-slate-200'}">
@@ -291,6 +346,10 @@ function renderDemoSwitcher(demoData) {
 }
 
 async function quickLogin(userId) {
+    // 0. Close the demo switcher popup immediately
+    const demoMenu = document.getElementById('demo-switcher-menu');
+    if (demoMenu) demoMenu.classList.add('hidden');
+
     // 1. Cover screen immediately with synchronous solid loader
     showAppLoader('Switching Demo Persona...', 'Purging workspace and authenticating role...');
     

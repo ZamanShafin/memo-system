@@ -360,7 +360,7 @@
 
                     <!-- Demo Quick Switcher Dropdown Button -->
                     <div class="relative">
-                        <button onclick="document.getElementById('demo-switcher-menu').classList.toggle('hidden')" class="px-3 py-1.5 bg-amber-400 hover:bg-amber-500 text-slate-950 rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-sm transition">
+                        <button id="btn-demo-switcher" onclick="toggleDemoSwitcherMenu(event)" class="px-3 py-1.5 bg-amber-400 hover:bg-amber-500 text-slate-950 rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-sm transition">
                             <i data-lucide="sparkles" class="w-3.5 h-3.5 text-slate-950"></i>
                             <span class="hidden md:inline">Demo Switcher</span>
                             <i data-lucide="chevron-down" class="w-3 h-3"></i>
@@ -368,7 +368,7 @@
                         <div id="demo-switcher-menu" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-50 max-h-96 overflow-y-auto">
                             <div class="px-4 py-2 text-xs font-bold text-slate-400 border-b border-slate-100 flex items-center justify-between">
                                 <span>Switch Role / Tenant</span>
-                                <span class="text-[10px] text-indigo-600">1-Click Login</span>
+                                <span class="text-[10px] text-indigo-600 font-bold">1-Click Login</span>
                             </div>
                             <div id="demo-switcher-dropdown"></div>
                         </div>
@@ -1348,6 +1348,6 @@
     </script>
 
     <!-- App Engine Script -->
-    <script src="/static/js/app.js?v=2.9.0"></script>
+    <script src="/static/js/app.js?v=3.0.0"></script>
 </body>
 </html>
