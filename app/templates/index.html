@@ -376,14 +376,14 @@
 
                     <!-- Notification Bell -->
                     <div class="relative">
-                        <button onclick="toggleNotificationsDropdown()" class="p-2 text-indigo-200 hover:text-white rounded-xl hover:bg-indigo-800/80 transition relative">
+                        <button id="btn-notifications-bell" onclick="toggleNotificationsDropdown(event)" class="p-2 text-indigo-200 hover:text-white rounded-xl hover:bg-indigo-800/80 transition relative">
                             <i data-lucide="bell" class="w-5 h-5"></i>
                             <span id="notification-badge" class="hidden absolute top-1 right-1 px-1.5 py-0.2 text-[10px] font-black bg-rose-500 text-white rounded-full">0</span>
                         </button>
                         <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-50">
                             <div class="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between">
                                 <span class="font-bold text-xs text-slate-800">In-App Notifications</span>
-                                <button onclick="markAllNotificationsRead()" class="text-[11px] text-indigo-600 hover:underline font-semibold">Mark all read</button>
+                                <button onclick="markAllNotificationsRead(event)" class="text-[11px] text-indigo-600 hover:underline font-semibold">Mark all read</button>
                             </div>
                             <div id="notifications-items-list" class="max-h-64 overflow-y-auto divide-y divide-slate-100"></div>
                         </div>
@@ -1348,6 +1348,6 @@
     </script>
 
     <!-- App Engine Script -->
-    <script src="/static/js/app.js?v=3.0.0"></script>
+    <script src="/static/js/app.js?v=3.1.0"></script>
 </body>
 </html>

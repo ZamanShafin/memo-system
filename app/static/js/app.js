@@ -2270,10 +2270,19 @@ async function fetchUnreadCount() {
     } catch (e) {}
 }
 
-async function toggleNotificationsDropdown() {
+async function toggleNotificationsDropdown(e) {
+    if (e) {
+        e.stopPropagation();
+        e.preventDefault();
+    }
     const dropdown = document.getElementById('notifications-dropdown');
+    if (!dropdown) return;
     const isHidden = dropdown.classList.contains('hidden');
     
+    // Close demo switcher if open
+    const demoMenu = document.getElementById('demo-switcher-menu');
+    if (demoMenu) demoMenu.classList.add('hidden');
+
     if (isHidden) {
         dropdown.classList.remove('hidden');
         try {
@@ -2281,8 +2290,9 @@ async function toggleNotificationsDropdown() {
             appState.notifications = notifs;
             const list = document.getElementById('notifications-items-list');
 
+            if (!list) return;
             if (notifs.length === 0) {
-                list.innerHTML = '<div class="p-4 text-center text-xs text-slate-400">No notifications.</div>';
+                list.innerHTML = '<div class="p-6 text-center text-xs text-slate-400">No notifications yet.</div>';
             } else {
                 list.innerHTML = notifs.map(n => `
                     <div onclick="handleNotificationClick(${n.id}, ${n.memo_id})" class="p-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer ${n.is_read ? 'opacity-70' : 'bg-indigo-50/40 font-semibold'} text-xs">
@@ -2304,18 +2314,33 @@ async function handleNotificationClick(notifId, memoId) {
     try {
         await apiCall(`/notifications/${notifId}/read`, { method: 'PUT' });
         fetchUnreadCount();
-        document.getElementById('notifications-dropdown').classList.add('hidden');
+        const dd = document.getElementById('notifications-dropdown');
+        if (dd) dd.classList.add('hidden');
         if (memoId) {
             showView('memo-detail', memoId);
         }
     } catch (e) {}
 }
 
-async function markAllNotificationsRead() {
+async function markAllNotificationsRead(e) {
+    if (e) e.stopPropagation();
     try {
         await apiCall('/notifications/mark-all-read', { method: 'POST' });
         fetchUnreadCount();
-        toggleNotificationsDropdown();
+        const notifs = await apiCall('/notifications');
+        appState.notifications = notifs;
+        const list = document.getElementById('notifications-items-list');
+        if (list && notifs) {
+            list.innerHTML = notifs.map(n => `
+                <div onclick="handleNotificationClick(${n.id}, ${n.memo_id})" class="p-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer opacity-70 text-xs">
+                    <div class="flex items-center justify-between">
+                        <span class="text-indigo-900">${n.title}</span>
+                        <span class="text-[10px] text-slate-400 font-normal">${new Date(n.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                    </div>
+                    <p class="text-slate-600 text-[11px] mt-0.5 font-normal">${n.message}</p>
+                </div>
+            `).join('');
+        }
     } catch (e) {}
 }
 
