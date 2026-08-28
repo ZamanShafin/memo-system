@@ -776,53 +776,73 @@ async function submitMemoForm(isDraft = false) {
 // -------------------------------------------------------------
 // 7. MEMO DETAIL & WORKFLOW TIMELINE VIEW
 // -------------------------------------------------------------
+function populateMemoDOM(memo) {
+    if (!memo) return;
+    appState.selectedMemoId = memo.id;
+
+    // Render Header & Badges
+    document.getElementById('detail-memo-number').textContent = memo.memo_number || '';
+    document.getElementById('detail-memo-title').textContent = memo.title || '';
+    
+    const statusBadge = document.getElementById('detail-memo-status');
+    statusBadge.textContent = memo.status || '';
+    statusBadge.className = `px-3 py-1 text-xs font-bold rounded-full ${getStatusBadgeClass(memo.status)}`;
+
+    const priorityBadge = document.getElementById('detail-memo-priority');
+    priorityBadge.textContent = memo.priority || 'Normal';
+    priorityBadge.className = `px-2.5 py-0.5 text-xs font-semibold rounded ${getPriorityBadgeClass(memo.priority)}`;
+
+    document.getElementById('detail-memo-author').textContent = `${memo.author?.full_name || 'Staff'} (${memo.author?.designation || 'Staff'})`;
+    document.getElementById('detail-memo-dept').textContent = memo.department ? memo.department.name : 'General';
+    document.getElementById('detail-memo-category').textContent = memo.category ? memo.category.name : 'Uncategorized';
+    document.getElementById('detail-memo-date').textContent = new Date(memo.created_at || Date.now()).toLocaleString();
+
+    // Render Rich Content Body
+    document.getElementById('detail-memo-body').innerHTML = memo.body || '';
+
+    // Render Sequential Stepper Visualizer
+    renderWorkflowStepper(memo);
+
+    // Render Action Buttons for Current User
+    renderWorkflowActionBar(memo);
+
+    // Render Attachments
+    renderAttachmentsList(memo);
+
+    // Render Versions Snapshot Tab
+    renderVersionsList(memo);
+
+    // Render Discussion & Comments
+    renderCommentsList(memo);
+
+    if (window.lucide) lucide.createIcons();
+}
+
 async function renderMemoDetailView(memoId) {
     const container = document.getElementById('memo-detail-view');
     container.classList.remove('hidden');
 
+    // 1. Instant render from memory cache (0ms!)
+    const allKnownMemos = [
+        ...(appState.inboxMemos || []),
+        ...(appState.sentMemos || []),
+        ...(appState.completedMemos || []),
+        ...(appState.draftMemos || [])
+    ];
+    const cachedMemo = allKnownMemos.find(m => m.id == memoId);
+    if (cachedMemo) {
+        populateMemoDOM(cachedMemo);
+    }
+
+    // 2. Background sync
     try {
         const memo = await apiCall(`/memos/${memoId}`);
-        appState.selectedMemoId = memo.id;
-
-        // Render Header & Badges
-        document.getElementById('detail-memo-number').textContent = memo.memo_number;
-        document.getElementById('detail-memo-title').textContent = memo.title;
-        
-        const statusBadge = document.getElementById('detail-memo-status');
-        statusBadge.textContent = memo.status;
-        statusBadge.className = `px-3 py-1 text-xs font-bold rounded-full ${getStatusBadgeClass(memo.status)}`;
-
-        const priorityBadge = document.getElementById('detail-memo-priority');
-        priorityBadge.textContent = memo.priority;
-        priorityBadge.className = `px-2.5 py-0.5 text-xs font-semibold rounded ${getPriorityBadgeClass(memo.priority)}`;
-
-        document.getElementById('detail-memo-author').textContent = `${memo.author.full_name} (${memo.author.designation || 'Staff'})`;
-        document.getElementById('detail-memo-dept').textContent = memo.department ? memo.department.name : 'General';
-        document.getElementById('detail-memo-category').textContent = memo.category ? memo.category.name : 'Uncategorized';
-        document.getElementById('detail-memo-date').textContent = new Date(memo.created_at).toLocaleString();
-
-        // Render Rich Content Body
-        document.getElementById('detail-memo-body').innerHTML = memo.body;
-
-        // Render Sequential Stepper Visualizer
-        renderWorkflowStepper(memo);
-
-        // Render Action Buttons for Current User
-        renderWorkflowActionBar(memo);
-
-        // Render Attachments
-        renderAttachmentsList(memo);
-
-        // Render Versions Snapshot Tab
-        renderVersionsList(memo);
-
-        // Render Discussion & Comments
-        renderCommentsList(memo);
-
-        lucide.createIcons();
+        populateMemoDOM(memo);
     } catch (e) {
-        showToast(e.message, 'error');
-        showView('dashboard');
+        if (!cachedMemo) {
+            showToast(e.message, 'error');
+            showView('dashboard');
+        }
     }
 }
 

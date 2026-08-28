@@ -26,24 +26,22 @@ if is_sqlite:
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.close()
 else:
-    # PostgreSQL with Neon / Supabase
-    if is_serverless:
-        # In serverless environments, NullPool prevents stale pooled sockets
-        engine = create_engine(
-            db_url,
-            poolclass=NullPool,
-            pool_pre_ping=True,
-            connect_args={"connect_timeout": 5}
-        )
-    else:
-        engine = create_engine(
-            db_url,
-            pool_size=10,
-            max_overflow=20,
-            pool_recycle=300,
-            pool_pre_ping=True,
-            connect_args={"connect_timeout": 5}
-        )
+    # PostgreSQL with Neon PgBouncer Pooler
+    # Use optimized connection pooling without redundant pre-ping to eliminate roundtrip overhead
+    engine = create_engine(
+        db_url,
+        pool_size=10,
+        max_overflow=20,
+        pool_recycle=180,
+        pool_pre_ping=False,
+        connect_args={
+            "connect_timeout": 5,
+            "keepalives": 1,
+            "keepalives_idle": 30,
+            "keepalives_interval": 10,
+            "keepalives_count": 5
+        }
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
