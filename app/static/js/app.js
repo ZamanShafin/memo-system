@@ -2488,3 +2488,87 @@ function renderBarChart(canvasId, labels, data, label, color = '#3b82f6') {
         }
     });
 }
+
+// -------------------------------------------------------------
+// 14. USER PROFILE MANAGEMENT
+// -------------------------------------------------------------
+async function renderProfileView() {
+    const container = document.getElementById('profile-view');
+    if (!container) return;
+    container.classList.remove('hidden');
+
+    if (!appState.user) return;
+
+    // Populate profile form fields
+    const nameInput = document.getElementById('profile-name-input');
+    const desigInput = document.getElementById('profile-designation-input');
+    const deptSelect = document.getElementById('profile-dept-select');
+    const oldPwd = document.getElementById('profile-old-pwd');
+    const newPwd = document.getElementById('profile-new-pwd');
+
+    if (nameInput) nameInput.value = appState.user.full_name || '';
+    if (desigInput) desigInput.value = appState.user.designation || '';
+    if (oldPwd) oldPwd.value = '';
+    if (newPwd) newPwd.value = '';
+
+    if (deptSelect) {
+        if (!appState.departments || appState.departments.length === 0) {
+            try {
+                appState.departments = await apiCall('/admin/departments');
+            } catch (e) {}
+        }
+        deptSelect.innerHTML = '<option value="0">No Department / General</option>' + (appState.departments || []).map(d => `<option value="${d.id}" ${d.id === appState.user.department_id ? 'selected' : ''}>${d.name}</option>`).join('');
+    }
+}
+
+async function saveProfileChanges() {
+    const full_name = document.getElementById('profile-name-input')?.value.trim();
+    const designation = document.getElementById('profile-designation-input')?.value.trim();
+    const deptIdVal = document.getElementById('profile-dept-select')?.value;
+    const department_id = deptIdVal ? parseInt(deptIdVal) : null;
+
+    if (!full_name) {
+        showToast('Full name is required', 'warning');
+        return;
+    }
+
+    try {
+        const updatedUser = await apiCall('/auth/profile', {
+            method: 'PUT',
+            body: JSON.stringify({
+                full_name,
+                designation,
+                department_id: department_id > 0 ? department_id : null
+            })
+        });
+
+        appState.user = updatedUser;
+        localStorage.setItem('memo_user', JSON.stringify(updatedUser));
+        updateHeaderUI();
+        showToast('Profile updated successfully!', 'success');
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+async function savePasswordChange() {
+    const old_password = document.getElementById('profile-old-pwd')?.value;
+    const new_password = document.getElementById('profile-new-pwd')?.value;
+
+    if (!old_password || !new_password) {
+        showToast('Please provide both current and new password', 'warning');
+        return;
+    }
+
+    try {
+        await apiCall('/auth/change-password', {
+            method: 'POST',
+            body: JSON.stringify({ old_password, new_password })
+        });
+        showToast('Password changed successfully!', 'success');
+        document.getElementById('profile-old-pwd').value = '';
+        document.getElementById('profile-new-pwd').value = '';
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
