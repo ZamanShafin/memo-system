@@ -70,10 +70,6 @@ def verify_memo_access(memo: models.Memo, user: models.User, db: Session) -> boo
         if any(s.assigned_user_id == delegation.delegator_id for s in memo.workflow_steps):
             return True
             
-    # For completed memos in same department
-    if memo.status == "Approved" and memo.department_id and memo.department_id == user.department_id:
-        return True
-        
     return False
 
 
