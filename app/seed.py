@@ -137,11 +137,44 @@ def seed_database(seed_demo_memos: bool = False, db_session = None):
     for u in [u_admin, u_head, u_finance, u_director, u_ceo, u_employee1, u_employee2]:
         db.refresh(u)
 
-    # Reusable Workflow Templates for Acme Corp
+    # Reusable Workflow Templates for Acme Corp (Section 15 Specification)
     tmpl_purchase = models.WorkflowTemplate(
         org_id=org_acme.id,
-        name="Procurement / Purchase Request",
-        description="Standard 5-step executive approval workflow (Requester → Dept Head → Finance → Director → CEO)",
+        name="Purchase Request",
+        description="Standard 3-step expenditure sign-off (Employee → Department Head → Finance → Director)",
+        steps_json=json.dumps([
+            {"role_name": "Employee / Requester", "step_type": "author", "default_user_id": u_employee1.id},
+            {"role_name": "Department Head", "step_type": "approval", "default_user_id": u_head.id},
+            {"role_name": "Finance Manager", "step_type": "approval", "default_user_id": u_finance.id},
+            {"role_name": "Director of Operations", "step_type": "final_approval", "default_user_id": u_director.id}
+        ])
+    )
+    tmpl_leave = models.WorkflowTemplate(
+        org_id=org_acme.id,
+        name="Leave Request",
+        description="Standard employee leave approval workflow (Employee → Line Manager → HR)",
+        steps_json=json.dumps([
+            {"role_name": "Employee", "step_type": "author", "default_user_id": u_employee1.id},
+            {"role_name": "Line Manager / Dept Head", "step_type": "approval", "default_user_id": u_head.id},
+            {"role_name": "HR Manager / Administrator", "step_type": "final_approval", "default_user_id": u_admin.id}
+        ])
+    )
+    tmpl_procurement = models.WorkflowTemplate(
+        org_id=org_acme.id,
+        name="Procurement Request",
+        description="Comprehensive 4-step requisition chain (Requester → Department Head → Procurement → Finance → Director)",
+        steps_json=json.dumps([
+            {"role_name": "Requester / Author", "step_type": "author", "default_user_id": u_employee1.id},
+            {"role_name": "Department Head", "step_type": "approval", "default_user_id": u_head.id},
+            {"role_name": "Procurement Specialist", "step_type": "review", "default_user_id": u_employee2.id},
+            {"role_name": "Finance Manager", "step_type": "approval", "default_user_id": u_finance.id},
+            {"role_name": "Director of Operations", "step_type": "final_approval", "default_user_id": u_director.id}
+        ])
+    )
+    tmpl_exec = models.WorkflowTemplate(
+        org_id=org_acme.id,
+        name="Executive Strategic Memorandum",
+        description="Full executive governance chain (Requester → Dept Head → Finance → Director → CEO)",
         steps_json=json.dumps([
             {"role_name": "Requester / Author", "step_type": "author", "default_user_id": u_employee1.id},
             {"role_name": "Department Head", "step_type": "approval", "default_user_id": u_head.id},
@@ -150,17 +183,7 @@ def seed_database(seed_demo_memos: bool = False, db_session = None):
             {"role_name": "Chief Executive Officer (CEO)", "step_type": "final_approval", "default_user_id": u_ceo.id}
         ])
     )
-    tmpl_leave = models.WorkflowTemplate(
-        org_id=org_acme.id,
-        name="Employee Leave Request",
-        description="Standard approval workflow for employee leave (Employee → Line Manager → HR)",
-        steps_json=json.dumps([
-            {"role_name": "Employee", "step_type": "author", "default_user_id": u_employee1.id},
-            {"role_name": "Line Manager / Dept Head", "step_type": "approval", "default_user_id": u_head.id},
-            {"role_name": "HR Manager", "step_type": "final_approval", "default_user_id": u_admin.id}
-        ])
-    )
-    db.add_all([tmpl_purchase, tmpl_leave])
+    db.add_all([tmpl_purchase, tmpl_leave, tmpl_procurement, tmpl_exec])
     db.commit()
 
     # Active Delegation: David Vance (Dept Head) delegates authority to Jessica Taylor

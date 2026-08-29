@@ -896,7 +896,7 @@ function addWorkflowStepRow(index, defaultRole = '', defaultType = 'approval', d
 
     row.innerHTML = `
         <div class="flex items-center justify-between w-full sm:w-auto">
-            <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0">
+            <div class="step-badge-number w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0">
                 ${stepCount}
             </div>
             <button type="button" onclick="this.closest('.workflow-step-row').remove(); renumberWorkflowSteps();" class="sm:hidden text-slate-400 hover:text-rose-600 p-1">
@@ -938,17 +938,22 @@ function renumberWorkflowSteps() {
     const rows = document.querySelectorAll('.workflow-step-row');
     rows.forEach((r, idx) => {
         r.setAttribute('data-step-index', idx + 1);
-        r.querySelector('.w-8').textContent = idx + 1;
+        const badge = r.querySelector('.step-badge-number') || r.querySelector('.rounded-full');
+        if (badge) badge.textContent = idx + 1;
     });
 }
 
 function handleTemplateSelectChange(templateId) {
-    if (!templateId) return;
+    if (!templateId) {
+        initWorkflowBuilder();
+        return;
+    }
     const tmpl = appState.templates.find(t => t.id == templateId);
     if (!tmpl) return;
     try {
         const steps = JSON.parse(tmpl.steps_json);
         initWorkflowBuilder(steps);
+        showToast(`Loaded "${tmpl.name}" workflow template`, 'success');
     } catch (e) {
         console.error('Invalid template steps json', e);
     }
