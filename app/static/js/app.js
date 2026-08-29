@@ -267,6 +267,7 @@ async function setupApp(showLoading = true) {
     if (showLoading) {
         setTimeout(hideAppLoader, 200);
     }
+    initSubNavScrollHandlers();
     if (window.lucide) lucide.createIcons();
 }
 
@@ -548,16 +549,66 @@ function showView(viewName, memoId = null) {
     }
 }
 
-// Sub-Navigation Horizontal Scroll Controls
+// Sub-Navigation Horizontal Scroll Controls & Touch/Drag Handlers
 function scrollSubNav(direction) {
     const nav = document.getElementById('sub-nav-bar');
     if (!nav) return;
-    const amount = direction === 'left' ? -240 : 240;
+    const amount = direction === 'left' ? -220 : 220;
     nav.scrollBy({ left: amount, behavior: 'smooth' });
 }
 
-// Global Keyboard Navigation (← / → Arrow Keys)
-document.addEventListener('keydown', (e) => {
+function initSubNavScrollHandlers() {
+    const nav = document.getElementById('sub-nav-bar');
+    if (!nav || nav.hasAttribute('data-scroll-initialized')) return;
+    nav.setAttribute('data-scroll-initialized', 'true');
+
+    // 1. Mouse wheel horizontal scroll
+    nav.addEventListener('wheel', (e) => {
+        if (e.deltaY !== 0) {
+            e.preventDefault();
+            nav.scrollLeft += e.deltaY * 0.9;
+        }
+    }, { passive: false });
+
+    // 2. Mouse Drag to Scroll
+    let isDown = false;
+    let startX = 0;
+    let scrollStart = 0;
+    let isDragging = false;
+
+    nav.addEventListener('mousedown', (e) => {
+        isDown = true;
+        isDragging = false;
+        startX = e.pageX - nav.offsetLeft;
+        scrollStart = nav.scrollLeft;
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (!isDown) return;
+        isDown = false;
+        setTimeout(() => { isDragging = false; }, 50);
+    });
+
+    nav.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        const x = e.pageX - nav.offsetLeft;
+        const walk = (x - startX) * 1.5;
+        if (Math.abs(walk) > 4) {
+            isDragging = true;
+        }
+        nav.scrollLeft = scrollStart - walk;
+    });
+
+    // 3. Prevent accidental tab switch if user was dragging
+    nav.querySelectorAll('.nav-link').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            if (isDragging) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }, true);
+    });
+}
     // Only intercept if user is logged in
     if (!appState.token || !appState.user) return;
 
