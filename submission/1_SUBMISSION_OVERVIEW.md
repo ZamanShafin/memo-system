@@ -1,7 +1,7 @@
-# CSE226 Foundations of Vibe Coding — Final Project Submission
+# CSE226 Fundamentals of Vibe Coding — Final Project Submission
 
 ## Project Title: Multi-Tenant Inter-Office Memo Management System
-**Course:** CSE226 Foundations of Vibe Coding  
+**Course:** CSE226 Fundamentals of Vibe Coding  
 **Institution:** North South University  
 **Student / Submitter:** Zaman Shafin  
 **Repository:** [https://github.com/ZamanShafin/memo-system](https://github.com/ZamanShafin/memo-system)  

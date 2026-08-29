@@ -23,7 +23,7 @@ def create_submission_form_doc():
     # 1. HEADER / TITLE
     title_p = doc.add_paragraph()
     title_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    title_run = title_p.add_run('CSE226 Foundations of Vibe Coding\nFinal Project Submission Form')
+    title_run = title_p.add_run('CSE226 Fundamentals of Vibe Coding\nFinal Project Submission Form')
     title_run.font.size = Pt(20)
     title_run.font.bold = True
     title_run.font.color.rgb = RGBColor(30, 27, 75) # Indigo 950
@@ -41,7 +41,7 @@ def create_submission_form_doc():
     meta_table = doc.add_table(rows=5, cols=2)
     meta_table.alignment = WD_TABLE_ALIGNMENT.CENTER
     meta_data = [
-        ('Course Title:', 'CSE226 Foundations of Vibe Coding'),
+        ('Course Title:', 'CSE226 Fundamentals of Vibe Coding'),
         ('Institution:', 'North South University'),
         ('Student / Submitter:', 'Zaman Shafin'),
         ('Submission Date:', 'August 2026'),

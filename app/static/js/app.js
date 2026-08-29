@@ -1,6 +1,6 @@
 /**
  * Inter-Office Memo Management System - Frontend SPA Engine
- * CSE226 Foundations of Vibe Coding (North South University)
+ * CSE226 Fundamentals of Vibe Coding (North South University)
  */
 
 const API_BASE = '/api/v1';

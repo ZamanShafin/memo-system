@@ -1,7 +1,7 @@
 # Installation and Setup Guide (Reproducing from Source ZIP)
 
 **Project:** Multi-Tenant Inter-Office Memo Management System  
-**Course:** CSE226 Foundations of Vibe Coding  
+**Course:** CSE226 Fundamentals of Vibe Coding  
 **Author:** Zaman Shafin  
 
 ---

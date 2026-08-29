@@ -26,7 +26,7 @@ def apply_doc_margins(doc):
 # ==============================================================================
 proj_doc_md = r'''# Inter-Office Memo Management System — Technical Project Documentation
 
-**Course:** CSE226 Foundations of Vibe Coding  
+**Course:** CSE226 Fundamentals of Vibe Coding  
 **Institution:** North South University  
 **Student / Author:** Zaman Shafin  
 **Deployed System URL:** [https://memo-system-pjbj.vercel.app](https://memo-system-pjbj.vercel.app)  
@@ -147,7 +147,8 @@ graph TD
 ### Entity-Relationship Structure:
 - organizations: Master tenant registry (id, 
 ame, code, contact_email).
-- users: User profiles with roles (id, org_id, department_id, ull_name, email, password_hash, ole, is_active).
+- users: User profiles with roles (id, org_id, department_id, ull_name, email, password_hash, 
+ole, is_active).
 - departments: Functional divisions (id, org_id, 
 ame, description).
 - memos: Memorandum records (id, org_id, memo_number, 	itle, ody_html, priority, status, uthor_id, current_assignee_id).
@@ -227,7 +228,7 @@ t_meta = doc1.add_table(rows=4, cols=2)
 t_meta.alignment = WD_TABLE_ALIGNMENT.CENTER
 m_rows = [
     ('Author / Student:', 'Zaman Shafin (North South University)'),
-    ('Course:', 'CSE226 Foundations of Vibe Coding'),
+    ('Course:', 'CSE226 Fundamentals of Vibe Coding'),
     ('Live Application:', 'https://memo-system-pjbj.vercel.app'),
     ('Source Code ZIP:', 'https://github.com/ZamanShafin/memo-system/raw/main/source_code.zip')
 ]
@@ -273,7 +274,7 @@ print('Created final_submission/PROJECT_DOCUMENTATION.md & .docx')
 install_md = r'''# Installation and Setup Guide (Reproducing from Source ZIP)
 
 **Project:** Multi-Tenant Inter-Office Memo Management System  
-**Course:** CSE226 Foundations of Vibe Coding  
+**Course:** CSE226 Fundamentals of Vibe Coding  
 **Author:** Zaman Shafin  
 
 ---
@@ -442,7 +443,7 @@ print('Created final_submission/INSTALLATION_INSTRUCTIONS.md & .docx')
 # ==============================================================================
 vibe_md = r'''# Vibe-Coding Process & AI-Assisted Development Report
 
-**Course:** CSE226 Foundations of Vibe Coding  
+**Course:** CSE226 Fundamentals of Vibe Coding  
 **Student / Author:** Zaman Shafin  
 **Tool Used:** Google Antigravity AI Pair Programming Agent  
 
@@ -508,7 +509,7 @@ r_t3 = p_t3.add_run('Vibe-Coding Process & AI Interaction Report\n')
 r_t3.bold = True
 r_t3.font.size = Pt(20)
 r_t3.font.color.rgb = RGBColor(30, 27, 75)
-r_sub3 = p_t3.add_run('CSE226 Foundations of Vibe Coding — Summer 2026')
+r_sub3 = p_t3.add_run('CSE226 Fundamentals of Vibe Coding — Summer 2026')
 r_sub3.font.size = Pt(12)
 r_sub3.font.color.rgb = RGBColor(79, 70, 229)
 
@@ -535,7 +536,7 @@ print('Created final_submission/VIBE_CODING_PROCESS.md & .docx')
 # ==============================================================================
 summary_md = r'''# CSE226 Final Project Submission Summary & Quick Reference
 
-**Course:** CSE226 Foundations of Vibe Coding  
+**Course:** CSE226 Fundamentals of Vibe Coding  
 **Institution:** North South University  
 **Student / Submitter:** Zaman Shafin  
 

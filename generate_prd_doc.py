@@ -52,7 +52,7 @@ def generate_prd():
         ('Product Version:', 'v4.3.0 Enterprise Release (Production Live)'),
         ('Document Status:', 'Approved & Baseline Implemented'),
         ('Product Owner / Lead:', 'Zaman Shafin (North South University)'),
-        ('Course / Context:', 'CSE226 Foundations of Vibe Coding'),
+        ('Course / Context:', 'CSE226 Fundamentals of Vibe Coding'),
         ('Live Cloud Deployment:', 'https://memo-system-pjbj.vercel.app'),
         ('Source Code Repository:', 'https://github.com/ZamanShafin/memo-system')
     ]

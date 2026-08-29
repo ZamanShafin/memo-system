@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="Multi-Tenant Inter-Office Memo Management System for CSE226 Foundations of Vibe Coding (NSU)",
+    description="Multi-Tenant Inter-Office Memo Management System for CSE226 Fundamentals of Vibe Coding (NSU)",
     lifespan=lifespan
 )
 

@@ -23,7 +23,7 @@ def create_styled_document():
     # 1. TITLE / HEADER
     title_p = doc.add_paragraph()
     title_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    title_run = title_p.add_run('CSE226 Foundations of Vibe Coding\nFinal Project Documentation')
+    title_run = title_p.add_run('CSE226 Fundamentals of Vibe Coding\nFinal Project Documentation')
     title_run.font.size = Pt(22)
     title_run.font.bold = True
     title_run.font.color.rgb = RGBColor(30, 27, 75)
@@ -40,7 +40,7 @@ def create_styled_document():
     meta_table = doc.add_table(rows=5, cols=2)
     meta_table.alignment = WD_TABLE_ALIGNMENT.CENTER
     meta_data = [
-        ('Course & Term:', 'CSE226 Foundations of Vibe Coding — Summer 2026'),
+        ('Course & Term:', 'CSE226 Fundamentals of Vibe Coding — Summer 2026'),
         ('Institution:', 'North South University'),
         ('Student / Author:', 'Zaman Shafin'),
         ('Deployed Application URL:', 'https://memo-system-pjbj.vercel.app'),

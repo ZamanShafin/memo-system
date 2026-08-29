@@ -1,7 +1,7 @@
 [project]
 name = "inter-office-memo-system"
 version = "1.0.0"
-description = "Multi-Tenant Inter-Office Memo Management System for CSE226 Foundations of Vibe Coding (NSU)"
+description = "Multi-Tenant Inter-Office Memo Management System for CSE226 Fundamentals of Vibe Coding (NSU)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

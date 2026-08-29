@@ -1,6 +1,6 @@
 # CSE226 Final Project Submission Summary & Quick Reference
 
-**Course:** CSE226 Foundations of Vibe Coding  
+**Course:** CSE226 Fundamentals of Vibe Coding  
 **Institution:** North South University  
 **Student / Submitter:** Zaman Shafin  
 

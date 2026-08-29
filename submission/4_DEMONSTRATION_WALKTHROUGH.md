@@ -1,6 +1,6 @@
 ﻿# Evaluator Demonstration Walkthrough Guide (Section 28 Compliance)
 
-**Course:** CSE226 Foundations of Vibe Coding  
+**Course:** CSE226 Fundamentals of Vibe Coding  
 **Live System URL:** https://memo-system-pjbj.vercel.app  
 **Universal Demo Password:** password123  
 **Active Organization:** acme  

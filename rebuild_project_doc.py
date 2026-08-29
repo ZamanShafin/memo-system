@@ -84,7 +84,7 @@ meta_table = doc.add_table(rows=5, cols=2)
 meta_table.alignment = WD_TABLE_ALIGNMENT.CENTER
 meta_data = [
     ("Author / Student:", "Zaman Shafin (North South University)"),
-    ("Course & Term:", "CSE226 Foundations of Vibe Coding — Summer 2026"),
+    ("Course & Term:", "CSE226 Fundamentals of Vibe Coding — Summer 2026"),
     ("Deployed System URL:", "https://memo-system-pjbj.vercel.app"),
     ("Source Code Archive:", "https://github.com/ZamanShafin/memo-system/raw/main/source_code.zip"),
     ("GitHub Repository:", "https://github.com/ZamanShafin/memo-system")

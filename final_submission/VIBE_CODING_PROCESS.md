@@ -1,6 +1,6 @@
 # Vibe-Coding Process & AI-Assisted Development Report
 
-**Course:** CSE226 Foundations of Vibe Coding  
+**Course:** CSE226 Fundamentals of Vibe Coding  
 **Student / Author:** Zaman Shafin  
 **Tool Used:** Google Antigravity AI Pair Programming Agent  
 
