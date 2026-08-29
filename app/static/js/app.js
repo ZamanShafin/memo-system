@@ -427,11 +427,25 @@ async function loadInitialData() {
 function updateHeaderUI() {
     if (!appState.user || !appState.organization) return;
     
-    document.getElementById('org-name-display').textContent = appState.organization.name;
-    document.getElementById('org-code-badge').textContent = appState.organization.code.toUpperCase();
-    document.getElementById('user-name-display').textContent = appState.user.full_name;
-    document.getElementById('user-designation-display').textContent = `${appState.user.designation || 'Staff'} • ${appState.user.role.toUpperCase()}`;
+    const orgName = document.getElementById('org-name-display');
+    if (orgName) orgName.textContent = appState.organization.name;
+    const orgBadge = document.getElementById('org-code-badge');
+    if (orgBadge) orgBadge.textContent = appState.organization.code.toUpperCase();
+    const userName = document.getElementById('user-name-display');
+    if (userName) userName.textContent = appState.user.full_name;
+    const userDesig = document.getElementById('user-designation-display');
+    if (userDesig) userDesig.textContent = `${appState.user.designation || 'Staff'} • ${appState.user.role.toUpperCase()}`;
     
+    // Set user avatar initials
+    const initialsEl = document.getElementById('user-avatar-initials');
+    if (initialsEl && appState.user.full_name) {
+        const parts = appState.user.full_name.trim().split(' ').filter(Boolean);
+        const initials = parts.length > 1 
+            ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+            : parts[0].substring(0, 2).toUpperCase();
+        initialsEl.textContent = initials;
+    }
+
     // Show/hide admin-only navigation links
     const adminNavs = document.querySelectorAll('.admin-only-nav');
     adminNavs.forEach(el => {
