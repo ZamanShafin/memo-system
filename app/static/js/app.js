@@ -2361,27 +2361,191 @@ async function renderAdminTemplates() {
     if (!container) return;
 
     if (tmpls.length === 0) {
-        container.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs">No reusable workflow templates created yet.</div>`;
+        container.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs">No reusable workflow templates created yet. Click "+ Create Template" above to define one.</div>`;
         return;
     }
 
     container.innerHTML = tmpls.map(t => {
         let stepCount = 0;
-        try { stepCount = JSON.parse(t.steps_json).length; } catch (e) {}
+        let stepsSummary = '';
+        try { 
+            const steps = JSON.parse(t.steps_json);
+            stepCount = steps.length;
+            stepsSummary = steps.map((s, idx) => {
+                let userLabel = '';
+                if (s.default_user_id) {
+                    const u = appState.orgUsers.find(usr => usr.id == s.default_user_id);
+                    if (u) userLabel = ` (${u.full_name})`;
+                }
+                return `
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-200 text-slate-700 rounded-xl text-[11px] font-medium shadow-2xs">
+                        <span class="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[9px] font-bold">${idx + 1}</span>
+                        <span>${s.role_name}</span>
+                        ${userLabel ? `<span class="text-slate-400 text-[10px]">${userLabel}</span>` : ''}
+                    </span>
+                `;
+            }).join(' <span class="text-slate-300 font-bold">→</span> ');
+        } catch (e) {}
+
         return `
-            <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1">
-                <div class="flex items-center justify-between">
-                    <span class="font-bold text-slate-900 text-sm">${t.name}</span>
-                    <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 rounded-full font-bold text-[10px]">${stepCount} Approval Steps</span>
+            <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-2.5 hover:border-slate-300 transition">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <span class="font-bold text-slate-900 text-sm">${t.name}</span>
+                        <p class="text-slate-500 text-[11px] mt-0.5">${t.description || 'Pre-configured institutional approval chain.'}</p>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 rounded-full font-bold text-[10px]">${stepCount} Steps</span>
+                        <button onclick="deleteWorkflowTemplate(${t.id})" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition" title="Delete Template">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
                 </div>
-                <p class="text-slate-500 text-[11px]">${t.description || 'Pre-configured institutional approval chain.'}</p>
+                <div class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-200/60">
+                    ${stepsSummary || '<span class="text-slate-400 italic text-[11px]">No steps defined</span>'}
+                </div>
             </div>
         `;
     }).join('');
+    lucide.createIcons();
 }
 
 function showCreateTemplateModal() {
-    showToast('Use New Memo form with "Save as Template" option or API endpoint to define templates.', 'info');
+    const modal = document.getElementById('tmpl-modal');
+    if (!modal) return;
+    document.getElementById('tmpl-modal-name').value = '';
+    document.getElementById('tmpl-modal-desc').value = '';
+    const container = document.getElementById('tmpl-modal-steps-container');
+    container.innerHTML = '';
+    
+    // Seed with 2 default rows
+    addTemplateModalStepRow('Department Head', 'approval');
+    addTemplateModalStepRow('Finance Manager', 'approval');
+    
+    modal.classList.remove('hidden');
+    lucide.createIcons();
+}
+
+function closeTemplateModal() {
+    const modal = document.getElementById('tmpl-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function addTemplateModalStepRow(defaultRole = '', defaultType = 'approval', defaultUserId = null) {
+    const container = document.getElementById('tmpl-modal-steps-container');
+    if (!container) return;
+    const stepCount = container.children.length + 1;
+
+    const row = document.createElement('div');
+    row.className = 'tmpl-step-row flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-2xl relative';
+    row.setAttribute('data-step-index', stepCount);
+
+    const userOptions = appState.orgUsers.map(u => 
+        `<option value="${u.id}" ${defaultUserId === u.id ? 'selected' : ''}>${u.full_name} (${u.designation || u.role})</option>`
+    ).join('');
+
+    row.innerHTML = `
+        <div class="flex items-center justify-between w-full sm:w-auto">
+            <div class="w-6 h-6 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-[10px] flex-shrink-0">
+                ${stepCount}
+            </div>
+            <button type="button" onclick="this.closest('.tmpl-step-row').remove(); renumberTemplateModalSteps();" class="sm:hidden text-slate-400 hover:text-rose-600 p-1">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+        </div>
+        <div class="w-full flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Role / Title *</label>
+                <input type="text" class="tmpl-step-role-input w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-xl focus:ring-1 focus:ring-indigo-500 bg-white" value="${defaultRole || 'Approver'}" placeholder="e.g. Department Head" required>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Step Type</label>
+                <select class="tmpl-step-type-select w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-xl focus:ring-1 focus:ring-indigo-500 bg-white">
+                    <option value="approval" ${defaultType === 'approval' ? 'selected' : ''}>Approval</option>
+                    <option value="review" ${defaultType === 'review' ? 'selected' : ''}>Review / Endorsement</option>
+                    <option value="final_approval" ${defaultType === 'final_approval' ? 'selected' : ''}>Final Executive Sanction</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Default Assignee</label>
+                <select class="tmpl-step-user-select w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-xl focus:ring-1 focus:ring-indigo-500 bg-white">
+                    <option value="">Any Eligible Officer</option>
+                    ${userOptions}
+                </select>
+            </div>
+        </div>
+        <button type="button" onclick="this.closest('.tmpl-step-row').remove(); renumberTemplateModalSteps();" class="hidden sm:block text-slate-400 hover:text-rose-600 p-1">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+    `;
+
+    container.appendChild(row);
+    renumberTemplateModalSteps();
+    lucide.createIcons();
+}
+
+function renumberTemplateModalSteps() {
+    const rows = document.querySelectorAll('.tmpl-step-row');
+    rows.forEach((r, idx) => {
+        r.setAttribute('data-step-index', idx + 1);
+        const badge = r.querySelector('div > div');
+        if (badge) badge.textContent = idx + 1;
+    });
+}
+
+async function handleTemplateFormSubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('tmpl-modal-name').value.trim();
+    const description = document.getElementById('tmpl-modal-desc').value.trim();
+    const rows = document.querySelectorAll('.tmpl-step-row');
+    
+    if (rows.length === 0) {
+        showToast('At least one approval step is required for a template', 'error');
+        return;
+    }
+
+    const steps = [];
+    rows.forEach(r => {
+        const role_name = r.querySelector('.tmpl-step-role-input').value.trim() || 'Approver';
+        const step_type = r.querySelector('.tmpl-step-type-select').value;
+        const userVal = r.querySelector('.tmpl-step-user-select').value;
+        const default_user_id = userVal ? parseInt(userVal) : null;
+        steps.push({ role_name, step_type, default_user_id });
+    });
+
+    try {
+        await apiCall('/admin/templates', {
+            method: 'POST',
+            body: JSON.stringify({ name, description, steps })
+        });
+        showToast(`Workflow template "${name}" created successfully!`, 'success');
+        closeTemplateModal();
+        await renderAdminTemplates();
+        
+        // Also update New Memo template selector dropdown if present
+        const tmplSelect = document.getElementById('memo-template-select');
+        if (tmplSelect) {
+            tmplSelect.innerHTML = '<option value="">Custom Sequential Workflow</option>' + appState.templates.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        }
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+async function deleteWorkflowTemplate(tmplId) {
+    if (!confirm('Are you sure you want to delete this reusable workflow template?')) return;
+    try {
+        await apiCall(`/admin/templates/${tmplId}`, { method: 'DELETE' });
+        showToast('Workflow template deleted', 'success');
+        await renderAdminTemplates();
+        
+        const tmplSelect = document.getElementById('memo-template-select');
+        if (tmplSelect) {
+            tmplSelect.innerHTML = '<option value="">Custom Sequential Workflow</option>' + appState.templates.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        }
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
 }
 
 // -------------------------------------------------------------
