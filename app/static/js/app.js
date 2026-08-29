@@ -609,6 +609,9 @@ function initSubNavScrollHandlers() {
         }, true);
     });
 }
+
+// Global Keyboard Navigation (← / → Arrow Keys)
+document.addEventListener('keydown', (e) => {
     // Only intercept if user is logged in
     if (!appState.token || !appState.user) return;
 
