@@ -332,16 +332,16 @@ function renderDemoSwitcher(demoData) {
 
     let html = '';
     accounts.forEach(org => {
-        html += `<div class="px-3 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-slate-800">${org.org_name} (${org.org_code})</div>`;
+        html += `<div class="px-3.5 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-wider bg-slate-50 border-y border-slate-100">${org.org_name} (${org.org_code})</div>`;
         (org.users || []).forEach(u => {
             const isCurrent = appState.user && appState.user.id === u.id;
             html += `
-                <button onclick="quickLogin(${u.id})" class="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-indigo-50 dark:hover:bg-slate-700 transition ${isCurrent ? 'bg-indigo-50/80 font-bold text-indigo-700' : 'text-slate-700 dark:text-slate-200'}">
-                    <div>
-                        <div class="font-semibold">${u.full_name}</div>
-                        <div class="text-[11px] text-slate-500">${u.designation || u.department} • <span class="capitalize text-indigo-600">${u.role}</span></div>
+                <button onclick="quickLogin(${u.id})" class="w-full text-left px-3.5 py-2.5 text-xs flex items-center justify-between gap-2 hover:bg-indigo-50 transition border-b border-slate-50 last:border-0 ${isCurrent ? 'bg-indigo-50/90 font-bold text-indigo-900' : 'text-slate-700'}">
+                    <div class="min-w-0 flex-1">
+                        <div class="font-bold text-slate-900 text-xs truncate">${u.full_name}</div>
+                        <div class="text-[11px] text-slate-500 truncate">${u.designation || u.department || ''} • <span class="capitalize text-indigo-600 font-semibold">${u.role}</span></div>
                     </div>
-                    ${isCurrent ? '<span class="text-xs bg-indigo-600 text-white px-1.5 py-0.5 rounded">Active</span>' : ''}
+                    ${isCurrent ? '<span class="text-[10px] bg-indigo-600 text-white font-black px-2 py-0.5 rounded-full shrink-0 shadow-2xs">Active</span>' : ''}
                 </button>
             `;
         });
