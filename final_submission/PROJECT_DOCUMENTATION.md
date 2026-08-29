@@ -1,58 +1,82 @@
 # CSE226 Final Project Technical Documentation
 
-**Course:** CSE226 Foundations of Vibe Coding  
-**Institution:** North South University  
-**Student / Author:** Zaman Shafin  
-**Deployed Application:** [https://memo-system-pjbj.vercel.app](https://memo-system-pjbj.vercel.app)  
-**Source Code Archive:** [https://github.com/ZamanShafin/memo-system/raw/main/source_code.zip](https://github.com/ZamanShafin/memo-system/raw/main/source_code.zip)  
-**GitHub Repository:** [https://github.com/ZamanShafin/memo-system](https://github.com/ZamanShafin/memo-system)  
+### Multi-Tenant Inter-Office Memo Management System
+**Deterministic Sequential Approval Workflow Engine & Document Governance SaaS**
+
+---
+
+| Field | Value |
+| :--- | :--- |
+| **Name:** | **M.N. Zaman Shafin** |
+| **ID:** | **2232299030** |
+| **Course & Semester:** | **CSE226 Foundations of Vibe Coding - Summer 2026** |
+| **Deployed System URL:** | [https://memo-system-pjbj.vercel.app](https://memo-system-pjbj.vercel.app) |
+| **Source Code Archive:** | [https://github.com/ZamanShafin/memo-system/raw/main/source_code.zip](https://github.com/ZamanShafin/memo-system/raw/main/source_code.zip) |
+| **GitHub Repository:** | [https://github.com/ZamanShafin/memo-system](https://github.com/ZamanShafin/memo-system) |
+
+---
+
+## Table of Contents
+1. [System Overview & Core Capabilities](#1-system-overview--core-capabilities)
+2. [Requirements Implemented (Compliance Matrix)](#2-requirements-implemented-compliance-matrix)
+3. [Technology Stack](#3-technology-stack)
+4. [System Architecture & Diagram](#4-system-architecture--diagram)
+5. [Database Design & Multi-Tenancy Enforcement](#5-database-design--multi-tenancy-enforcement)
+6. [Sequential Workflow Design & Turn Governance](#6-sequential-workflow-design--turn-governance)
+7. [Security Architecture & Access Control](#7-security-architecture--access-control)
+8. [Known Limitations](#8-known-limitations)
+9. [Deployment Information & Demonstration Accounts](#9-deployment-information--demonstration-accounts)
 
 ---
 
 ## 1. System Overview & Core Capabilities
 
-The **Inter-Office Memo Management System** is a full-stack, cloud-native, multi-tenant SaaS application designed to digitize, govern, and audit corporate memorandum workflows.
+The **Inter-Office Memo Management System** is a full-stack, multi-tenant SaaS application built to digitize, govern, and audit corporate memorandum workflows. It eliminates fragmented email threads and physical paper slips by enforcing deterministic sequential approvals, active delegation, immutable version history, and cryptographic PDF generation.
 
-### Key Capabilities:
-- **Strict Multi-Tenancy:** Complete logical data partitioning with org_id foreign-key scoping on every table and query.
-- **Deterministic Turn-Based Workflow:** Memos advance in linear sequential order (*Requester -> Dept Head -> Finance -> Director -> CEO*). Later participants are physically blocked from acting early.
-- **Dynamic Reviewer Insertion:** Active turn holders can insert ad-hoc intermediate reviewers (*Approve & Add Reviewer*) mid-stream.
-- **Date-Bounded Delegation:** Officers on official leave can delegate temporary approval authority.
-- **Immutable Versioning:** Change requests return memos to the author; editing creates historical snapshots before resubmission.
-- **Cryptographic PDF Seals:** Official signed PDFs with QR code verification and signature matrices.
+### Key System Highlights:
+- **Multi-Tenant Isolation:** Logical data partitioning with non-nullable org_id scoping across every database query.
+- **Strict Turn Governance:** Memos execute sequentially (*Requester -> Dept Head -> Finance -> Director -> CEO*). Later participants are physically blocked from acting early.
+- **Active Delegation:** Temporary date-bounded approval authority handoffs when officers are on leave.
+- **Dynamic Reviewer Injection:** Approvers can dynamically insert specialized reviewers (e.g. Legal Counsel) mid-stream.
+- **Tamper-Evident Auditing:** Append-only audit logs with timestamps, actor IDs, comments, and client IPs.
+- **PDF Seal Engine:** Generates official corporate PDFs complete with digital signatures and QR verification codes.
 
 ---
 
 ## 2. Requirements Implemented (Compliance Matrix)
 
-| Ref # | Requirement Area | Status | Implementation Summary |
-| :--- | :--- | :---: | :--- |
-| **Req 1-4** | Multi-Tenancy & RBAC | **COMPLETE** | Universal org_id data perimeters, Admin/User roles, department management. |
-| **Req 5-7** | Auth & Memo Authoring | **COMPLETE** | JWT tokens, password reset, Quill.js rich text editor, priority tags, file attachments. |
-| **Req 8-10** | Sequential Workflow Engine | **COMPLETE** | Strict linear turn execution, templates, dynamic mid-stream reviewer insertion. |
-| **Req 11-13** | Decisions & Delegation | **COMPLETE** | Approve, Reject, Request Changes with audit notes; date-bounded delegation. |
-| **Req 14-17** | PDFs, Alerts & Versions | **COMPLETE** | Cryptographic PDF seal generation, notification tray, immutable version snapshots. |
-| **Req 18-22** | Audit & Security | **COMPLETE** | Append-only audit logs, turnaround charts, admin self-deactivation protection. |
-| **Req 23-30** | Deployment & Testing | **COMPLETE** | Live on Vercel, sanitized source ZIP, 20/20 passing pytest suite, full prompt log. |
+| Ref # | Requirement Area | Implementation Highlights |
+| :--- | :--- | :--- |
+| **Req 1-4** | **Multi-Tenancy & RBAC** | Complete org_id data perimeters, Admin/User roles, department management. |
+| **Req 5-7** | **Auth & Memo Authoring** | JWT tokens, password reset, Quill.js rich text editor, priority tags, file uploads. |
+| **Req 8-10** | **Sequential Workflow Engine** | Strict linear turn execution, workflow templates, mid-stream reviewer insertion. |
+| **Req 11-13** | **Decisions & Delegation** | Approve, Reject, Request Changes with audit notes; date-bounded delegation. |
+| **Req 14-17** | **PDFs, Alerts & Versions** | Cryptographic PDF seal generation, notification tray, immutable version snapshots. |
+| **Req 18-22** | **Audit & Security** | Append-only audit logs, turnaround charts, admin self-deactivation protection. |
+| **Req 23-30** | **Deployment & Testing** | Live on Vercel, sanitized source ZIP, 20/20 passing pytest suite, full prompt log. |
 
 ---
 
 ## 3. Technology Stack
 
-- **Backend API:** FastAPI (Asynchronous Python 3.10+ REST API)
-- **Database & ORM:** PostgreSQL 16 (Neon Cloud) + SQLAlchemy 2.0 ORM (Connection Pooling & SSL)
-- **Authentication:** Stateless JWT (PyJWT) + Passlib (PBKDF2-SHA256 & Bcrypt password hashing)
-- **Frontend SPA:** Lightweight Vanilla JavaScript Single-Page App (pp.js) with zero build steps
-- **Design & UI:** Tailwind CSS utility framework + Lucide Icons + Google Fonts
-- **Rich Text & Charts:** Quill.js WYSIWYG editor + Chart.js analytics engine
-- **PDF Generation:** ReportLab & xhtml2pdf with embedded signature stamps and QR codes
-- **Hosting & CI/CD:** Vercel Serverless Functions with automated Git integration
+| Layer / Component | Technology & Libraries |
+| :--- | :--- |
+| **Backend API Framework** | **FastAPI** (Asynchronous Python 3.10+ REST framework) |
+| **Database Engine & ORM** | **PostgreSQL 16** (Neon Serverless Cloud DB) + **SQLAlchemy 2.0 ORM** |
+| **Authentication & Security** | **PyJWT** (JSON Web Tokens) + **Passlib** (PBKDF2-SHA256 & Bcrypt hashing) |
+| **Frontend Single Page App** | **Vanilla JavaScript** SPA engine (pp.js) with zero build-step overhead |
+| **Styling & Design System** | **Tailwind CSS** utility framework + **Lucide Icons** + **Google Fonts** |
+| **Rich Text Authoring** | **Quill.js** WYSIWYG editor with custom toolbar & HTML sanitization |
+| **Visualizations & Charts** | **Chart.js** for real-time status doughnuts and turnaround duration bars |
+| **Document / PDF Engine** | **ReportLab** & **xhtml2pdf** with embedded signature stamps and QR codes |
+| **Cloud Infrastructure** | **Vercel Serverless Functions** with automated CI/CD pipeline |
+| **Testing & Tooling** | **Pytest** automated test harness (20/20 tests passing) + **Astral uv** |
 
 ---
 
 ## 4. System Architecture & Diagram
 
-### 4.1 High-Level Architecture Topology
+The application is structured into a clean 3-tier decoupled architecture comprising a Client SPA, a Stateless FastAPI REST API service layer, and a cloud-native PostgreSQL relational database.
 
 `
 +-----------------------------------------------------------------------------+
@@ -91,18 +115,17 @@ The **Inter-Office Memo Management System** is a full-stack, cloud-native, multi
 |  [memo_comments]  [attachments]  [audit_logs]   [notifications]             |
 +-----------------------------------------------------------------------------+
 `
+*Figure: High-Level 3-Tier System Architecture Diagram*
 
 ---
 
 ## 5. Database Design & Multi-Tenancy Enforcement
 
-### 5.1 Multi-Tenancy Data Perimeter Guard
-1. **Foreign-Key Scoping:** All principal entities (users, departments, memos, memo_workflow_steps, workflow_delegations, udit_logs, 
-otifications) include a mandatory org_id column.
-2. **Server-Side Filtering:** Every query automatically applies models.Entity.org_id == current_user.org_id.
-3. **Cross-Tenant Guard:** Direct object access (e.g. GET /api/v1/memos/{id}) verifies memo.org_id == current_user.org_id or rejects with HTTP 404/403.
+Multi-tenancy is enforced through strict logical data partitioning. Every single table in the database contains a non-nullable foreign key referencing organizations.id. Multi-tenancy is guaranteed at the database and API layer through the following mechanisms:
 
-### 5.2 Entity-Relationship Diagram
+- **Server-Side Query Scoping:** Every database query in all routers automatically includes models.Entity.org_id == current_user.org_id. Client-side filtering is never relied upon for security.
+- **Direct Object Access Validation:** When accessing a resource by ID (e.g. GET /api/v1/memos/10), the server verifies memo.org_id == current_user.org_id. If the tenant IDs mismatch, an immediate **HTTP 404 / 403** is thrown.
+- **Cascade Isolation:** Deleting or modifying a department, user, or workflow step is strictly constrained to the user's organization.
 
 `
 +-------------------+        +-------------------+        +----------------------+
@@ -126,12 +149,13 @@ otifications) include a mandatory org_id column.
 | created_by, created_at|    | start_date, end_date  |    | status, decision     |
 +-----------------------+    +-----------------------+    +----------------------+
 `
+*Figure: Entity-Relationship & Multi-Tenancy Diagram*
 
 ---
 
-## 6. Sequential Workflow & Delegation Design
+## 6. Sequential Workflow Design & Turn Governance
 
-### 6.1 State Transition Diagram
+The sequential workflow engine operates as a deterministic finite-state machine with strict turn-based locks. Only the currently assigned participant (or their authorized active delegate) can sign off.
 
 `
     [ Author Creates Memo ] 
@@ -156,42 +180,48 @@ otifications) include a mandatory org_id column.
          [ REJECTED ]              (Returns to Author for edits;
      (Workflow Terminated)          Creates immutable MemoVersion snapshot)
 `
+*Figure: Sequential Approval Workflow State Machine Diagram*
 
-### 6.2 Workflow Governance Rules
-- **Turn-Based Locks:** Step N must complete before Step N+1 can act.
-- **Dynamic Reviewer Insertion:** Turn holders can select *Approve & Add Reviewer* to insert intermediate reviewers.
-- **Delegation Protocol:** Designated delegates can sign off during active calendar windows with full audit attribution.
-- **Changes Requested:** Returns the memo to the author for revision and records an immutable MemoVersion snapshot upon resubmission.
-- **Final Approval:** CEO approval locks the memo as read-only, generates digital signatures, and seals the PDF.
+### Operational Behavior & Governance:
 
----
-
-## 7. Security Architecture
-
-- **Password Security:** PBKDF2-SHA256 and Bcrypt salting and hashing.
-- **Stateless JWT:** HMAC-SHA256 signed bearer tokens with 24-hour expiration.
-- **Admin Self-Protection:** Prevents administrators from deactivating or demoting themselves.
-- **Injection Protections:** Parameterized SQLAlchemy ORM queries and Quill.js HTML sanitization.
-- **Production SSL/TLS:** Enforced on Vercel frontend and Neon PostgreSQL connection pools.
+| Workflow Stage / Rule | Operational Behavior & Governance |
+| :--- | :--- |
+| **Draft -> Submission** | Author drafts memo and defines sequence. Submitting advances turn to Step 1 and dispatches notifications. |
+| **Step-by-Step Turns** | Step N must be completed before Step N+1 can act. Later approvers are physically blocked by server-side checks. |
+| **Dynamic Reviewer Insertion** | Approver can select *'Approve & Add Reviewer'* to insert a specialist (e.g. Legal Counsel) before next step. |
+| **Decline & Reroute** | Turn holder can reassign their active step to an eligible colleague in the same organization. |
+| **Delegation Protocol** | When active date window is valid, designated delegatee can sign off on behalf of delegator with full audit attribution. |
+| **Changes Requested Cycle** | Reviewer returns memo with comments. Author updates content; system creates MemoVersion snapshot before resubmission. |
+| **Final Approval & Seal** | Final approver (CEO) marks workflow Approved. System locks content as read-only and generates official signed PDF. |
 
 ---
 
-## 8. Known Limitations (Documented Transparently)
+## 7. Security Architecture & Access Control
 
-1. **In-App Notification Transport:** Uses responsive client HTTP polling rather than full-duplex WebSockets.
-2. **Object Storage:** Attachments are stored within the PostgreSQL database layer rather than dedicated AWS S3 buckets.
-3. **Two-Factor Authentication:** MFA/TOTP is reserved for future enterprise versions.
+- **Cryptographic Passwords:** Passwords are salted and encrypted using PBKDF2-SHA256 and Bcrypt algorithms.
+- **JWT Bearer Sessions:** Stateless tokens signed with HMAC-SHA256 with 24-hour expiration.
+- **Admin Self-Protection:** Dedicated server-side rules block administrators from deactivating or demoting their own accounts.
+- **Injection & XSS Defenses:** Parameterized queries via SQLAlchemy prevent SQL injection; rich text HTML is sanitized before rendering.
+- **Secure Cloud Connection:** Database connection strictly requires SSL/TLS encryption (sslmode=require).
 
 ---
 
-## 9. Deployment Information & Evaluation Accounts
+## 8. Known Limitations
 
-- **Live URL:** [https://memo-system-pjbj.vercel.app](https://memo-system-pjbj.vercel.app)
+1. **In-App Notification Transport:** Uses responsive client-side HTTP polling rather than full-duplex WebSockets.
+2. **Object Storage:** File attachments are persisted within the PostgreSQL database layer rather than external AWS S3 buckets.
+3. **Two-Factor Authentication:** MFA/TOTP is reserved for future enterprise roadmap versions.
+
+---
+
+## 9. Deployment Information & Demonstration Accounts
+
+- **Live Deployed URL:** [https://memo-system-pjbj.vercel.app](https://memo-system-pjbj.vercel.app)
 - **Source Code ZIP:** [https://github.com/ZamanShafin/memo-system/raw/main/source_code.zip](https://github.com/ZamanShafin/memo-system/raw/main/source_code.zip)
-- **Organization Code:** cme
+- **Active Organization Code:** cme
 - **Universal Password:** password123
 
-| Role | Email | Evaluation Persona |
+| Role | Login Email | Persona / Purpose |
 | :--- | :--- | :--- |
 | **Admin** | dmin@acmecorp.com | Sarah Jenkins (System Administrator) |
 | **Author** | lex.morgan@acmecorp.com | Alex Morgan (Senior Engineer / Author) |
